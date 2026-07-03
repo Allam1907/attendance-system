@@ -1,0 +1,3136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الحضور والغياب</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --bg2: #181c27;
+            --bg3: #1e2333;
+            --bg4: #252b3b;
+            --border: #2e3650;
+            --border2: #3d4a6b;
+            --text: #e8ecf4;
+            --text2: #9aa3bc;
+            --text3: #6b7594;
+            --accent: #4f8ef7;
+            --accent2: #3a6fd8;
+            --green: #22c55e;
+            --green-bg: #0d2818;
+            --green-b: #166534;
+            --red: #ef4444;
+            --red-bg: #2d0a0a;
+            --red-b: #7f1d1d;
+            --amber: #f59e0b;
+            --amber-bg: #1c1505;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, .45);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            direction: rtl;
+            min-height: 100vh;
+        }
+        .app {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+        }
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+        }
+        .page-title span {
+            font-size: 26px;
+        }
+        .tabs {
+            display: flex;
+            gap: 3px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1.75rem;
+            overflow-x: auto;
+            padding-bottom: 0;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 11px 18px;
+            font-size: 13.5px;
+            cursor: pointer;
+            color: var(--text3);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+            font-family: inherit;
+            transition: color .2s, border-color .2s;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        }
+        .tab-btn:hover {
+            color: var(--text2);
+            background: var(--bg2);
+        }
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            font-weight: 600;
+            background: var(--bg2);
+        }
+        .tab-page {
+            display: none;
+        }
+        .tab-page.active {
+            display: block;
+        }
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .form-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .form-row input,
+        .form-row select,
+        input[type=date],
+        input[type=month] {
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: inherit;
+            direction: rtl;
+            transition: border-color .2s, box-shadow .2s;
+            outline: none;
+        }
+        .form-row input:focus,
+        .form-row select:focus,
+        input[type=date]:focus,
+        input[type=month]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, .15);
+        }
+        .form-row input {
+            flex: 1;
+            min-width: 110px;
+        }
+        .form-row select {
+            flex: 1;
+            min-width: 130px;
+        }
+        select option {
+            background: var(--bg3);
+            color: var(--text);
+        }
+        .btn {
+            padding: 9px 18px;
+            border: 1px solid var(--border2);
+            border-radius: var(--radius-sm);
+            background: var(--bg3);
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .18s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover {
+            background: var(--bg4);
+            border-color: var(--accent);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .btn-primary:hover {
+            background: var(--accent2);
+            border-color: var(--accent2);
+        }
+        .btn-danger {
+            background: var(--red-bg);
+            color: var(--red);
+            border-color: var(--red-b);
+        }
+        .btn-danger.active {
+            background: var(--red);
+            color: #fff;
+            border-color: var(--red);
+        }
+        .btn-danger-solid {
+            background: var(--red);
+            color: #fff;
+            border-color: var(--red-b);
+        }
+        .btn-danger-solid:hover {
+            background: #b91c1c;
+            border-color: #7f1d1d;
+        }
+        .btn-icon {
+            padding: 7px 10px;
+            color: var(--text3);
+            border-color: var(--border);
+            background: transparent;
+        }
+        .btn-icon:hover {
+            color: var(--red);
+            background: var(--red-bg);
+            border-color: var(--red-b);
+        }
+        .btn-export {
+            background: var(--green-bg);
+            color: var(--green);
+            border: 1px solid var(--green-b);
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all .18s;
+        }
+        .btn-export:hover {
+            background: var(--green);
+            color: #fff;
+        }
+        .btn-export-all {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            font-weight: 700;
+            padding: 12px 28px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all .18s;
+        }
+        .btn-export-all:hover {
+            background: var(--accent2);
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-sabahi {
+            background: #2d1f00;
+            color: var(--amber);
+            border: 1px solid #78490a;
+        }
+        .badge-masai {
+            background: #0d1a3a;
+            color: #90b4ff;
+            border: 1px solid #1e3a7a;
+        }
+        .badge-line {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .badge-l1 {
+            background: #1a0d2e;
+            color: #c084fc;
+            border: 1px solid #5b21b6;
+        }
+        .badge-l2 {
+            background: #0d1f2e;
+            color: #60a5fa;
+            border: 1px solid #1e40af;
+        }
+        .badge-l3 {
+            background: #0d2218;
+            color: #34d399;
+            border: 1px solid #065f46;
+        }
+        .badge-lx {
+            background: #2e1a0d;
+            color: #fb923c;
+            border: 1px solid #7c2d12;
+        }
+        .badge-cat {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+        }
+        .badge-moshrif {
+            background: #312e1a;
+            color: #fde68a;
+        }
+        .badge-moshaghel {
+            background: #1a2231;
+            color: #93c5fd;
+        }
+        .badge-amal {
+            background: #1a2e1a;
+            color: #86efac;
+        }
+        .badge-sayek {
+            background: #2e1a1a;
+            color: #fca5a5;
+        }
+        .badge-fixed {
+            background: #1a1a2e;
+            color: #a78bfa;
+        }
+        .badge-loader {
+            background: #2e1a1a;
+            color: #fca5a5;
+        }
+        .badge-mosta3deen {
+            background: #2e1a0d;
+            color: #fb923c;
+        }
+        .emp-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 11px 16px;
+            margin-bottom: 8px;
+            transition: border-color .2s;
+        }
+        .emp-row:hover {
+            border-color: var(--border2);
+        }
+        .emp-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text);
+        }
+        .emp-meta {
+            font-size: 11.5px;
+            color: var(--text3);
+            margin: 4px 0 0;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .emp-line-section {
+            margin-bottom: 1.5rem;
+        }
+        .emp-line-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid;
+        }
+        .emp-line-header .toggle-icon {
+            margin-right: auto;
+            font-size: 11px;
+            opacity: .7;
+            transition: transform .2s;
+        }
+        .emp-line-header.collapsed .toggle-icon {
+            transform: rotate(180deg);
+        }
+        .line-hdr-l1 {
+            background: #1a0d2e;
+            color: #c084fc;
+            border-color: #5b21b6;
+        }
+        .line-hdr-l2 {
+            background: #0d1a2e;
+            color: #60a5fa;
+            border-color: #1e40af;
+        }
+        .line-hdr-l3 {
+            background: #0d2218;
+            color: #34d399;
+            border-color: #065f46;
+        }
+        .line-hdr-lx {
+            background: #2e1a0d;
+            color: #fb923c;
+            border-color: #7c2d12;
+        }
+        .line-hdr-none {
+            background: #1e1e1e;
+            color: var(--amber);
+            border-color: #78490a;
+        }
+        .emp-line-body {
+            transition: all .2s;
+        }
+        .emp-line-count {
+            font-size: 11px;
+            opacity: .7;
+            font-weight: 400;
+        }
+        .daily-group-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            padding: 10px 4px 6px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+            margin-top: 16px;
+        }
+        .daily-group-header:first-child {
+            margin-top: 0;
+        }
+        .daily-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 11px 16px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            transition: border-color .2s;
+        }
+        .daily-row:hover {
+            border-color: var(--border2);
+        }
+        .daily-btns {
+            display: flex;
+            gap: 6px;
+            margin-right: auto;
+        }
+        .ctrl-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .ctrl-row label {
+            font-size: 13px;
+            color: var(--text2);
+        }
+        .monthly-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        .monthly-table {
+            border-collapse: collapse;
+            font-size: 11px;
+            white-space: nowrap;
+            width: 100%;
+        }
+        .monthly-table th,
+        .monthly-table td {
+            border: 1px solid var(--border);
+            padding: 5px 4px;
+            text-align: center;
+        }
+        .monthly-table th {
+            background: var(--bg3);
+            font-weight: 600;
+            color: var(--text2);
+        }
+        .monthly-table td.name-cell {
+            text-align: right;
+            padding: 5px 12px;
+            font-weight: 600;
+            min-width: 140px;
+            background: var(--bg2);
+            position: sticky;
+            right: 0;
+            border-left: 2px solid var(--border2);
+            color: var(--text);
+        }
+        .monthly-table th.name-header {
+            text-align: right;
+            padding: 5px 12px;
+            position: sticky;
+            right: 0;
+            background: var(--bg3);
+            border-left: 2px solid var(--border2);
+        }
+        .cell-present {
+            background: #0d2818;
+            color: var(--green);
+            font-weight: 700;
+        }
+        .cell-absent {
+            background: #2d0a0a;
+            color: var(--red);
+            font-weight: 700;
+        }
+        .cell-empty {
+            background: var(--bg);
+            color: var(--text3);
+        }
+        .cell-offday {
+            background: var(--bg3);
+            color: var(--text3);
+            font-size: 9px;
+        }
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: var(--text3);
+            flex-wrap: wrap;
+        }
+        .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            vertical-align: -1px;
+            margin-left: 5px;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+        .metric-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.25rem;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: var(--text3);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .summary-table th {
+            background: var(--bg3);
+            padding: 10px 14px;
+            text-align: right;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            color: var(--text2);
+        }
+        .summary-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            text-align: right;
+            color: var(--text);
+        }
+        .summary-table td.num {
+            text-align: center;
+        }
+        .summary-table td.pct {
+            text-align: center;
+            font-weight: 700;
+        }
+        .summary-table tr:hover td {
+            background: var(--bg3);
+        }
+        #toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: #fff;
+            padding: 11px 24px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+            box-shadow: var(--shadow);
+        }
+        #toast.show {
+            opacity: 1;
+        }
+        .empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text3);
+            font-size: 14px;
+        }
+        .roster-date-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 1.25rem;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+        }
+        .roster-date-bar label {
+            font-size: 13px;
+            color: var(--text2);
+        }
+        .roster-mode-btns {
+            display: flex;
+            gap: 6px;
+        }
+        .mode-btn {
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border2);
+            background: var(--bg3);
+            color: var(--text2);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .18s;
+        }
+        .mode-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .roster-wrap {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .roster-shift {
+            flex: 1;
+            min-width: 320px;
+            background: var(--bg2);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .roster-shift-hdr {
+            padding: 13px 18px;
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: .3px;
+        }
+        .shift-sabahi .roster-shift-hdr {
+            background: linear-gradient(135deg, #2d1900, #1c1000);
+            color: var(--amber);
+            border-bottom: 2px solid #78490a;
+        }
+        .shift-masai .roster-shift-hdr {
+            background: linear-gradient(135deg, #0d1a3a, #071025);
+            color: #90b4ff;
+            border-bottom: 2px solid #1e3a7a;
+        }
+        .line-group {
+            border-bottom: 1px solid var(--border);
+        }
+        .line-group:last-child {
+            border-bottom: none;
+        }
+        .line-group-hdr {
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lg-l1 .line-group-hdr {
+            background: #1a0d2e;
+            color: #c084fc;
+        }
+        .lg-l2 .line-group-hdr {
+            background: #0d1a2e;
+            color: #60a5fa;
+        }
+        .lg-l3 .line-group-hdr {
+            background: #0d2218;
+            color: #34d399;
+        }
+        .lg-lx .line-group-hdr {
+            background: #2e1a0d;
+            color: #fb923c;
+        }
+        .cat-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .cat-row:last-child {
+            border-bottom: none;
+        }
+        .cat-col {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px 8px 10px;
+            border-left: 1px solid var(--border);
+        }
+        .cat-col:last-child {
+            border-left: none;
+        }
+        .cat-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+        .r-name {
+            font-size: 11px;
+            padding: 4px 8px;
+            margin-bottom: 4px;
+            border-radius: 5px;
+            text-align: center;
+            background: var(--bg3);
+            color: var(--text);
+            border: 1px solid var(--border);
+            cursor: grab;
+            user-select: none;
+            transition: all .15s;
+            position: relative;
+        }
+        .r-name:active {
+            cursor: grabbing;
+        }
+        .r-name:hover {
+            background: var(--bg4);
+            border-color: var(--border2);
+        }
+        .r-name.dragging {
+            opacity: .4;
+            transform: scale(.95);
+        }
+        .r-name.drag-over-top::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+        .r-name.drag-over-bottom::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+        .cat-col.drop-target-empty {
+            background: rgba(79, 142, 247, .08);
+            border: 2px dashed var(--accent);
+            border-radius: 6px;
+        }
+        .r-name-absent {
+            opacity: .35;
+            text-decoration: line-through;
+        }
+        .r-empty {
+            font-size: 10px;
+            text-align: center;
+            color: var(--text3);
+            padding: 4px;
+            min-height: 28px;
+        }
+        .roster-stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 2px solid var(--border);
+        }
+        .rstat {
+            text-align: center;
+            padding: 10px 6px;
+            border-left: 1px solid var(--border);
+        }
+        .rstat:last-child {
+            border-left: none;
+        }
+        .rstat .rs-label {
+            font-size: 10px;
+            color: var(--text3);
+            margin-bottom: 3px;
+        }
+        .rstat .rs-val {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .export-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .export-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+        .export-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        .export-card p {
+            font-size: 12px;
+            color: var(--text3);
+            margin-bottom: 14px;
+            line-height: 1.6;
+        }
+        .export-card .form-row {
+            margin-bottom: 12px;
+        }
+        .export-all-wrap {
+            background: linear-gradient(135deg, var(--bg2), var(--bg3));
+            border: 2px solid var(--accent);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .export-all-wrap h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+        .export-all-wrap p {
+            font-size: 12px;
+            color: var(--text3);
+            margin-bottom: 12px;
+        }
+        .export-all-inputs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .export-all-inputs input {
+            flex: 1;
+            min-width: 130px;
+        }
+        .backup-btns {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .backup-btns input[type="file"] {
+            display: none;
+        }
+        .btn-mass-absent {
+            background: var(--red-bg);
+            color: var(--red);
+            border: 1px solid var(--red-b);
+            font-size: 10px;
+            padding: 3px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .btn-mass-absent:hover {
+            background: var(--red);
+            color: #fff;
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            padding: 1rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal-box {
+            background: var(--bg2);
+            border: 1px solid var(--border2);
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(.95);
+            transition: transform .2s;
+        }
+        .modal-overlay.open .modal-box {
+            transform: scale(1);
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text3);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all .15s;
+        }
+        .modal-close:hover {
+            color: var(--red);
+            background: var(--red-bg);
+        }
+        .profile-hero {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .profile-info h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .profile-info .badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .profile-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .profile-stat {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            text-align: center;
+        }
+        .profile-stat .ps-label {
+            font-size: 11px;
+            color: var(--text3);
+            margin-bottom: 6px;
+        }
+        .profile-stat .ps-val {
+            font-size: 26px;
+            font-weight: 800;
+        }
+        .profile-stat .ps-sub {
+            font-size: 10px;
+            color: var(--text3);
+            margin-top: 3px;
+        }
+        .profile-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 10px;
+        }
+        .profile-week-bar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .day-pill {
+            flex: 1;
+            min-width: 50px;
+            padding: 8px 4px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+        }
+        .day-pill .dp-day {
+            font-size: 9px;
+            color: var(--text3);
+            margin-bottom: 4px;
+        }
+        .day-pill .dp-status {
+            font-size: 12px;
+        }
+        .day-pill.dp-absent {
+            background: var(--red-bg);
+            border-color: var(--red-b);
+        }
+        .day-pill.dp-present {
+            background: var(--green-bg);
+            border-color: var(--green-b);
+        }
+        .day-pill.dp-unreg {
+            background: var(--bg3);
+        }
+        .emp-profile-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--accent);
+            font-size: 13px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: inherit;
+            transition: all .15s;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .emp-profile-btn:hover {
+            background: rgba(79, 142, 247, .1);
+        }
+        .edit-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text3);
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all .15s;
+        }
+        .edit-btn:hover {
+            color: var(--accent);
+            background: var(--bg3);
+        }
+        .settings-btn {
+            background: none;
+            border: 1px solid var(--border2);
+            color: var(--text2);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .settings-btn:hover {
+            background: var(--bg4);
+            border-color: var(--accent);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 3px;
+        }
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-family: inherit;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
+            transform: translate(-50%, -50%);
+            opacity: .9;
+            white-space: nowrap;
+        }
+        .dash-hero {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 1.5rem;
+        }
+        .dash-kpi {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: border-color .2s;
+        }
+        .dash-kpi:hover {
+            border-color: var(--border2);
+        }
+        .dash-kpi::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+        .kpi-green::before {
+            background: linear-gradient(90deg, var(--green), #16a34a);
+        }
+        .kpi-red::before {
+            background: linear-gradient(90deg, var(--red), #b91c1c);
+        }
+        .kpi-amber::before {
+            background: linear-gradient(90deg, var(--amber), #d97706);
+        }
+        .kpi-blue::before {
+            background: linear-gradient(90deg, var(--accent), #3a6fd8);
+        }
+        .dash-kpi-label {
+            font-size: 12px;
+            color: var(--text3);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .dash-kpi-val {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+        .dash-kpi-sub {
+            font-size: 11px;
+            color: var(--text3);
+        }
+        .dash-kpi-icon {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.25rem;
+            font-size: 28px;
+            opacity: .15;
+        }
+        .dash-section {
+            margin-bottom: 1.75rem;
+        }
+        .dash-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dash-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .bar-rank {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text3);
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .bar-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            min-width: 130px;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .bar-track {
+            flex: 1;
+            background: var(--bg3);
+            border-radius: 20px;
+            height: 22px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 20px;
+            transition: width .6s cubic-bezier(.4, 0, .2, 1);
+            display: flex;
+            align-items: center;
+            padding-right: 10px;
+            justify-content: flex-end;
+        }
+        .bar-fill-val {
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .bar-pct {
+            font-size: 12px;
+            font-weight: 700;
+            width: 48px;
+            text-align: left;
+            flex-shrink: 0;
+        }
+        .trend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+        }
+        .trend-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+        .trend-card-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: var(--text2);
+        }
+        .sparkline-wrap {
+            width: 100%;
+            overflow: hidden;
+        }
+        .sparkline-svg {
+            width: 100%;
+            height: 70px;
+            display: block;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .compare-panel {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .compare-panel-hdr {
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+        }
+        .cmp-m1 .compare-panel-hdr {
+            background: linear-gradient(135deg, #0d1a3a, #071025);
+            color: #90b4ff;
+        }
+        .cmp-m2 .compare-panel-hdr {
+            background: linear-gradient(135deg, #1a0d00, #0d0800);
+            color: var(--amber);
+        }
+        .compare-stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .compare-stat-row:last-child {
+            border-bottom: none;
+        }
+        .compare-stat-label {
+            color: var(--text3);
+        }
+        .compare-stat-val {
+            font-weight: 700;
+            color: var(--text);
+        }
+        .today-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .today-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid;
+            cursor: default;
+        }
+        .pill-absent {
+            background: var(--red-bg);
+            color: var(--red);
+            border-color: var(--red-b);
+        }
+        .pill-present {
+            background: var(--green-bg);
+            color: var(--green);
+            border-color: var(--green-b);
+        }
+        .pill-unreg {
+            background: var(--bg3);
+            color: var(--text3);
+            border-color: var(--border);
+        }
+        .dash-last-update {
+            font-size: 11px;
+            color: var(--text3);
+            text-align: left;
+            margin-top: .5rem;
+        }
+        .empty-line-msg {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text3);
+            font-size: 13px;
+        }
+        .lines-horizontal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .line-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .line-card-header {
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .line-card-body {
+            padding: 8px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        .lc-l1 .line-card-header {
+            background: #1a0d2e;
+            color: #c084fc;
+        }
+        .lc-l2 .line-card-header {
+            background: #0d1a2e;
+            color: #60a5fa;
+        }
+        .lc-l3 .line-card-header {
+            background: #0d2218;
+            color: #34d399;
+        }
+        .lc-lx .line-card-header {
+            background: #2e1a0d;
+            color: #fb923c;
+        }
+        .lc-none .line-card-header {
+            background: #1e1e1e;
+            color: var(--amber);
+            border-color: #78490a;
+        }
+
+        /* تحسينات الرسم البياني */
+        .chart-container {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .chart-header h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text2);
+        }
+        .chart-header .chart-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text3);
+        }
+        .chart-header .chart-legend span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .chart-header .chart-legend .dot-sm {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 100px;
+            gap: 3px;
+            padding: 0 4px;
+        }
+        .chart-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .chart-bar {
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+            min-height: 2px;
+            transition: height .6s cubic-bezier(.4, 0, .2, 1);
+            position: relative;
+            background: linear-gradient(180deg, var(--red), #b91c1c);
+        }
+        .chart-bar-label {
+            font-size: 8px;
+            color: var(--text3);
+            margin-top: 4px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .chart-bar-tooltip {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            opacity: 0;
+            transition: opacity .2s;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        .chart-bar:hover .chart-bar-tooltip {
+            opacity: 1;
+        }
+        .chart-bar.bar-low {
+            background: linear-gradient(180deg, var(--green), #16a34a);
+        }
+        .chart-bar.bar-mid {
+            background: linear-gradient(180deg, var(--amber), #d97706);
+        }
+        .chart-bar.bar-high {
+            background: linear-gradient(180deg, var(--red), #b91c1c);
+        }
+        .chart-stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 11px;
+            color: var(--text3);
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+        }
+        .chart-stats-row span strong {
+            color: var(--text);
+        }
+
+        @media (max-width: 600px) {
+            .lines-horizontal-grid {
+                grid-template-columns: 1fr;
+            }
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+const SUPABASE_URL = "https://ttyjqqqdjyomxmwqfith.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Y1fGCQAVGGzZouA0S2admw_JWKcikSU";
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+async function testConnection() {
+    const { data, error } = await supabaseClient
+        .from("employees")
+        .select("*");
+
+    console.log(data);
+    console.log(error);
+
+    if (error) {
+        alert(error.message);
+    } else {
+        alert("تم الاتصال بـ Supabase ✅");
+    }
+}
+
+testConnection();
+</script>
+
+    <div id="toast"></div>
+    <!-- مودال بروفايل / تعديل -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="modal-box" id="profile-modal-box">
+            <div class="modal-header">
+                <h2 id="modal-title">👤 بروفايل الموظف</h2>
+                <button class="modal-close" id="profile-modal-close">✕</button>
+            </div>
+            <div id="profile-modal-content"></div>
+        </div>
+    </div>
+    <!-- مودال إعدادات الخطوط والورديات -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>⚙️ إعدادات الورديات والخطوط</h2>
+                <button class="modal-close" id="settings-modal-close">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div>
+                    <h3 style="color:var(--amber);margin-bottom:12px;">☀️ صباحي</h3>
+                    <div id="check-sabahi"></div>
+                </div>
+                <div>
+                    <h3 style="color:#90b4ff;margin-bottom:12px;">🌙 مسائي</h3>
+                    <div id="check-masai"></div>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="save-settings-btn" style="width:100%;margin-top:20px;">💾 حفظ الإعدادات</button>
+        </div>
+    </div>
+    <div class="drag-ghost" id="drag-ghost" style="display:none;"></div>
+
+    <div class="app">
+        <div class="page-title"><span>📋</span> نظام الحضور والغياب</div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">🏠 الرئيسية</button>
+            <button class="tab-btn" data-tab="employees">👥 الموظفين</button>
+            <button class="tab-btn" data-tab="daily">✅ تسجيل يومي</button>
+            <button class="tab-btn" data-tab="monthly">📅 الجدول الشهري</button>
+            <button class="tab-btn" data-tab="summary">📊 الملخص</button>
+            <button class="tab-btn" data-tab="roster">🗂 القوام الأساسي</button>
+            <button class="tab-btn" data-tab="export">📥 تصدير إكسيل</button>
+        </div>
+        <!-- DASHBOARD -->
+        <div class="tab-page active" id="page-dashboard">
+            <div class="ctrl-row">
+                <label>الشهر:</label>
+                <input type="month" id="dash-month" />
+            </div>
+            <div id="dash-content"></div>
+        </div>
+        <!-- EMPLOYEES -->
+        <div class="tab-page" id="page-employees">
+            <div class="card">
+                <div class="card-title">إضافة موظف جديد</div>
+                <div class="form-row">
+                    <input type="text" id="emp-name" placeholder="اسم الموظف *" />
+                    <select id="emp-shift">
+                        <option value="">— الوردية —</option>
+                        <option value="sabahi">☀️ صباحي</option>
+                        <option value="masai">🌙 مسائي</option>
+                    </select>
+                    <select id="emp-line">
+                        <option value="">— الخط —</option>
+                    </select>
+                    <select id="emp-cat">
+                        <option value="">— الفئة —</option>
+                        <option value="moshrif">مشرفين</option>
+                        <option value="moshaghel">مشغلين</option>
+                        <option value="amal">عمال</option>
+                        <option value="sayek">سايقين كلارك</option>
+                        <option value="fixed">فنيين</option>
+                        <option value="loader">لودر</option>
+                        <option value="mosta3deen">مستبعدين</option>
+                    </select>
+                    <button class="btn btn-primary" id="add-emp-btn">+ إضافة</button>
+                    <button class="btn btn-danger-solid" id="delete-all-btn">🗑 مسح الكل</button>
+                </div>
+            </div>
+            <div style="margin-bottom:1rem;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="search-emp" placeholder="🔍 ابحث عن موظف..."
+                    style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-size:13px;width:100%;max-width:320px;outline:none;transition:border-color .2s;"
+                    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'" />
+                    <span style="font-size:12px;color:var(--text3);" id="emp-count-label"></span>
+                </div>
+                <button class="settings-btn" id="open-settings-btn">⚙️ إعدادات الورديات والخطوط</button>
+            </div>
+            <div id="emp-list"></div>
+        </div>
+        <!-- DAILY -->
+        <div class="tab-page" id="page-daily">
+            <div class="ctrl-row">
+                <label>التاريخ:</label>
+                <input type="date" id="daily-date" />
+                <span id="daily-day-name" style="color:var(--text2);font-size:13px;"></span>
+            </div>
+            <div style="margin-bottom: 0.8rem;">
+                <input type="text" id="search-daily" placeholder="🔍 ابحث عن موظف..."
+                style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-size:13px;width:100%;max-width:320px;outline:none;transition:border-color .2s;"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'" />
+            </div>
+            <div id="daily-list"></div>
+        </div>
+        <!-- MONTHLY -->
+        <div class="tab-page" id="page-monthly">
+            <div class="ctrl-row">
+                <label>الشهر:</label>
+                <input type="month" id="monthly-month" />
+            </div>
+            <div style="margin-bottom: 0.8rem;">
+                <input type="text" id="search-monthly" placeholder="🔍 ابحث عن موظف..."
+                style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-size:13px;width:100%;max-width:320px;outline:none;transition:border-color .2s;"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'" />
+            </div>
+            <div class="legend">
+                <span><span class="dot" style="background:var(--green)"></span>حاضر (افتراضي)</span>
+                <span><span class="dot" style="background:var(--red)"></span>غائب</span>
+                <span><span class="dot" style="background:var(--text3)"></span>أيام مستقبلية</span>
+                <span><span class="dot" style="background:var(--bg3)"></span>إجازة (الخميس مسائي / الجمعة صباحي)</span>
+            </div>
+            <div class="monthly-wrap">
+                <table class="monthly-table" id="monthly-table"></table>
+            </div>
+        </div>
+        <!-- SUMMARY -->
+        <div class="tab-page" id="page-summary">
+            <div class="ctrl-row">
+                <label>التاريخ:</label>
+                <input type="date" id="summary-date" />
+                <span id="summary-day-name" style="color:var(--text2);font-size:13px;"></span>
+            </div>
+            <div class="metric-grid" id="summary-metrics"></div>
+            <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);">
+                <table class="summary-table" id="summary-table"></table>
+            </div>
+        </div>
+        <!-- ROSTER -->
+        <div class="tab-page" id="page-roster">
+            <div class="roster-date-bar">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <label>التاريخ:</label>
+                    <input type="date" id="roster-date" />
+                    <span id="roster-day" style="color:var(--text2);font-size:13px;"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:var(--text3);">💡 اسحب الأسماء لإعادة ترتيبها</span>
+                    <div class="roster-mode-btns">
+                        <button class="mode-btn active" id="mode-full">القوام الكامل</button>
+                        <button class="mode-btn" id="mode-present">الحاضرون فقط</button>
+                    </div>
+                </div>
+            </div>
+            <div id="roster-content"></div>
+        </div>
+        <!-- EXPORT -->
+        <div class="tab-page" id="page-export">
+            <div class="backup-btns">
+                <button class="btn" id="backup-btn">📥 نسخ احتياطي (JSON)</button>
+                <button class="btn" id="restore-btn">📤 استعادة نسخة</button>
+                <input type="file" id="restore-file" accept=".json" />
+            </div>
+            <div class="export-grid">
+                <div class="export-card">
+                    <h3>📅 كشف الحضور اليومي</h3>
+                    <p>كشف تفصيلي ليوم محدد بحالة كل موظف (حاضر = افتراضي، غائب = مسجل).</p>
+                    <div class="form-row"><input type="date" id="export-daily-date" /></div>
+                    <button class="btn-export" id="export-daily-btn">⬇ تصدير كشف اليوم</button>
+                </div>
+                <div class="export-card">
+                    <h3>📊 التراكمي الشهري</h3>
+                    <p>جدول شهري كامل يوماً بيوم مع إجماليات ونسب الغياب لكل موظف.</p>
+                    <div class="form-row"><input type="month" id="export-monthly-month" /></div>
+                    <button class="btn-export" id="export-monthly-btn">⬇ تصدير التراكمي</button>
+                </div>
+                <div class="export-card">
+                    <h3>🗂 التوزيعة (القوام الأساسي)</h3>
+                    <p>جدول التوزيع الكامل مقسّم بالخطوط والفئات للورديتين.</p>
+                    <div class="form-row"><input type="date" id="export-roster-date" /></div>
+                    <button class="btn-export" id="export-roster-btn">⬇ تصدير التوزيعة</button>
+                </div>
+            </div>
+            <div class="export-all-wrap">
+                <div style="flex:1;">
+                    <h3>📦 الملف الشامل — ٣ شيتات في ملف واحد</h3>
+                    <p>الكشف اليومي + التراكمي الشهري + التوزيعة.</p>
+                    <div class="export-all-inputs">
+                        <input type="date" id="export-all-date" />
+                        <input type="month" id="export-all-month" />
+                    </div>
+                    <button class="btn-export-all" id="export-all-btn">⬇ تصدير الملف الشامل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ══════════════════════════════════════════════
+        //  META
+        // ══════════════════════════════════════════════
+        const DAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const MONTH_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر',
+            'ديسمبر'
+        ];
+        const LINES = [
+            { key: 'l1', label: 'الخط الأول' },
+            { key: 'l2', label: 'الخط الثاني' },
+            { key: 'l3', label: 'الخط الثالث' },
+            { key: 'lx', label: 'خارج الخطوط' },
+        ];
+        const CATS = [
+            { key: 'moshrif', label: 'مشرفين' },
+            { key: 'moshaghel', label: 'مشغلين' },
+            { key: 'amal', label: 'عمال' },
+            { key: 'sayek', label: 'سايقين كلارك' },
+            { key: 'fixed', label: 'فنيين' },
+            { key: 'loader', label: 'لودر' },
+            { key: 'mosta3deen', label: 'مستبعدين' },
+        ];
+        const LINE_LABEL = Object.fromEntries(LINES.map(l => [l.key, l.label]));
+        const CAT_LABEL = Object.fromEntries(CATS.map(c => [c.key, c.label]));
+        const SHIFT_LABEL = { sabahi: 'صباحي', masai: 'مسائي' };
+
+        // إجازات: الخميس إجازة للمسائي، الجمعة إجازة للصباحي
+        function isOffDay(shift, dateStr) {
+            const d = new Date(dateStr + 'T12:00:00');
+            const day = d.getDay(); // 0=أحد, 4=خميس, 5=جمعة
+            if (shift === 'masai' && day === 4) return true; // الخميس مسائي
+            if (shift === 'sabahi' && day === 5) return true; // الجمعة صباحي
+            return false;
+        }
+
+        function loadRosterOrder() { try { return JSON.parse(localStorage.getItem('att_roster_order') || 'null') || {}; } catch (
+                e) { return {}; } }
+
+        function saveRosterOrder(o) { localStorage.setItem('att_roster_order', JSON.stringify(o)); }
+        let rosterOrder = loadRosterOrder();
+        const DEFAULT_LINE_CONFIG = { sabahi: ['l1', 'l2', 'l3', 'lx'], masai: ['l1', 'l2', 'l3', 'lx'] };
+
+        function loadLineConfig() { try { return JSON.parse(localStorage.getItem('att_line_config')) ||
+                DEFAULT_LINE_CONFIG; } catch (e) { return DEFAULT_LINE_CONFIG; } }
+
+        function saveLineConfig(cfg) { localStorage.setItem('att_line_config', JSON.stringify(cfg)); }
+        let lineConfig = loadLineConfig();
+
+        function getLinesForShift(shift) { const ids = lineConfig[shift] || []; return LINES.filter(l => ids.includes(l.key)); }
+
+        // ══════════════════════════════════════════════
+        //  HELPERS
+        // ══════════════════════════════════════════════
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        function todayStr() { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+        function monthStr() { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
+
+        function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+        function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
+                "'": '&#39;' }[c])); }
+
+        function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+        function dayName(dateStr) { return DAYS_AR[new Date(dateStr + 'T12:00:00').getDay()]; }
+
+        function getCurrentWeekDates() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const sunday = new Date(today);
+            sunday.setDate(today.getDate() - dayOfWeek);
+            const days = [];
+            for (let i = 0; i < 7; i++) { const d = new Date(sunday);
+                d.setDate(sunday.getDate() + i);
+                days.push(d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())); }
+            return days;
+        }
+        let toastTimer;
+
+        function toast(msg) { const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), 2500); }
+
+        // ══════════════════════════════════════════════
+        //  STORAGE
+        // ══════════════════════════════════════════════
+        function loadEmployees() { try { return JSON.parse(localStorage.getItem('att_employees') || '[]'); } catch (e) { return []; } }
+
+        function saveEmployees(a) { localStorage.setItem('att_employees', JSON.stringify(a)); }
+
+        function loadLog() { try { return JSON.parse(localStorage.getItem('att_log') || '{}'); } catch (e) { return {}; } }
+
+        function saveLog(o) { localStorage.setItem('att_log', JSON.stringify(o)); }
+        let employees = loadEmployees();
+        let log = loadLog();
+        let modalMode = 'profile';
+
+        // ══════════════════════════════════════════════
+        //  TABS
+        // ══════════════════════════════════════════════
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('page-' + btn.dataset.tab).classList.add('active');
+                employees = loadEmployees();
+                log = loadLog();
+                rosterOrder = loadRosterOrder();
+                const t = btn.dataset.tab;
+                if (t === 'dashboard') renderDashboard();
+                if (t === 'employees') renderEmployees(document.getElementById('search-emp').value);
+                if (t === 'daily') renderDaily();
+                if (t === 'monthly') renderMonthly();
+                if (t === 'summary') renderSummary();
+                if (t === 'roster') renderRoster();
+            });
+        });
+
+        // ══════════════════════════════════════════════
+        //  BADGE HELPERS
+        // ══════════════════════════════════════════════
+        function shiftBadge(s) { if (!s) return ''; return s === 'sabahi' ?
+                '<span class="badge badge-sabahi">☀️ صباحي</span>' : '<span class="badge badge-masai">🌙 مسائي</span>'; }
+
+        function lineBadge(l) { if (!l) return ''; const cls = { l1: 'badge-l1', l2: 'badge-l2', l3: 'badge-l3',
+                lx: 'badge-lx' } [l] || ''; return `<span class="badge-line ${cls}">${esc(LINE_LABEL[l]||l)}</span>`; }
+
+        function catBadge(c) { if (!c) return ''; const cls = { moshrif: 'badge-moshrif', moshaghel: 'badge-moshaghel',
+                amal: 'badge-amal', sayek: 'badge-sayek', fixed: 'badge-fixed', loader: 'badge-loader',
+                mosta3deen: 'badge-mosta3deen' } [c] || ''; return `<span class="badge-cat ${cls}">${esc(CAT_LABEL[c]||c)}</span>`; }
+
+        // ══════════════════════════════════════════════
+        //  SETTINGS MODAL
+        // ══════════════════════════════════════════════
+        function buildSettingsCheckboxes() {
+            const sabahiDiv = document.getElementById('check-sabahi');
+            const masaiDiv = document.getElementById('check-masai');
+            sabahiDiv.innerHTML = LINES.map(l => `
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+              <input type="checkbox" value="${l.key}" ${lineConfig.sabahi.includes(l.key)?'checked':''}>
+              ${l.label}
+            </label>`).join('');
+            masaiDiv.innerHTML = LINES.map(l => `
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+              <input type="checkbox" value="${l.key}" ${lineConfig.masai.includes(l.key)?'checked':''}>
+              ${l.label}
+            </label>`).join('');
+        }
+        document.getElementById('open-settings-btn').addEventListener('click', () => {
+            buildSettingsCheckboxes();
+            document.getElementById('settings-modal').classList.add('open');
+        });
+        document.getElementById('settings-modal-close').addEventListener('click', () => {
+            document.getElementById('settings-modal').classList.remove('open');
+        });
+        document.getElementById('settings-modal').addEventListener('click', e => {
+            if (e.target === document.getElementById('settings-modal')) document.getElementById('settings-modal')
+                .classList.remove('open');
+        });
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+            const sabahiChecks = document.querySelectorAll('#check-sabahi input[type="checkbox"]:checked');
+            const masaiChecks = document.querySelectorAll('#check-masai input[type="checkbox"]:checked');
+            lineConfig.sabahi = Array.from(sabahiChecks).map(cb => cb.value);
+            lineConfig.masai = Array.from(masaiChecks).map(cb => cb.value);
+            saveLineConfig(lineConfig);
+            document.getElementById('settings-modal').classList.remove('open');
+            renderEmployees(document.getElementById('search-emp').value);
+            renderRoster();
+            toast('تم حفظ إعدادات الخطوط والورديات ✅');
+        });
+        document.getElementById('emp-shift').addEventListener('change', function() {
+            const shift = this.value;
+            const lineSelect = document.getElementById('emp-line');
+            const currentLine = lineSelect.value;
+            const availableLines = shift ? getLinesForShift(shift) : LINES;
+            lineSelect.innerHTML = '<option value="">— الخط —</option>' + availableLines.map(l =>
+                `<option value="${l.key}" ${l.key===currentLine?'selected':''}>${l.label}</option>`).join('');
+        });
+
+        // ══════════════════════════════════════════════
+        //  PROFILE / EDIT MODAL
+        // ══════════════════════════════════════════════
+        function getEmpStatsForRange(empId, dateList) {
+            let present = 0,
+                absent = 0;
+            const emp = employees.find(e => e.id === empId);
+            dateList.forEach(d => {
+                if (isOffDay(emp?.shift, d)) return; // أيام الإجازة لا تحسب
+                const rec = log[d] && log[d][empId];
+                if (rec === 'absent') absent++;
+                else present++;
+            });
+            return { present, absent, total: present + absent };
+        }
+
+        let profileViewY = null;
+        let profileViewM = null;
+
+        function toggleProfileDay(empId, dateStr) {
+            const emp = employees.find(e => e.id === empId);
+            if (isOffDay(emp?.shift, dateStr)) { toast('هذا اليوم إجازة لهذه الوردية'); return; }
+            if (!log[dateStr]) log[dateStr] = {};
+            const cur = log[dateStr][empId];
+            if (cur === 'absent') { delete log[dateStr][empId]; } else { log[dateStr][empId] = 'absent'; }
+            saveLog(log);
+            renderProfileBody(empId);
+        }
+
+        function setProfileMonthBulk(empId, status) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+            const dim = daysInMonth(profileViewY, profileViewM);
+            const msg = status === 'absent' ?
+                `متأكد من تسجيل غياب "${emp.name}" لكل أيام العمل في شهر ${MONTH_AR[profileViewM-1]} ${profileViewY}؟` :
+                `متأكد من إلغاء كل أيام الغياب المسجلة لـ"${emp.name}" في شهر ${MONTH_AR[profileViewM-1]} ${profileViewY}؟`;
+            if (!confirm(msg)) return;
+            for (let d = 1; d <= dim; d++) {
+                const dateStr = `${profileViewY}-${pad(profileViewM)}-${pad(d)}`;
+                if (isOffDay(emp.shift, dateStr)) continue;
+                if (status === 'absent') { if (!log[dateStr]) log[dateStr] = {};
+                    log[dateStr][empId] = 'absent'; } else { if (log[dateStr]) delete log[dateStr][empId]; }
+            }
+            saveLog(log);
+            toast(status === 'absent' ? `تم تسجيل غياب "${emp.name}" لكل أيام العمل ✕` : `تم إلغاء غياب الشهر ✓`);
+            renderProfileBody(empId);
+        }
+
+        function changeProfileMonth(empId, delta) {
+            const d = new Date(profileViewY, profileViewM - 1 + delta, 1);
+            profileViewY = d.getFullYear();
+            profileViewM = d.getMonth() + 1;
+            renderProfileBody(empId);
+        }
+
+        function openProfile(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+            modalMode = 'profile';
+            document.getElementById('modal-title').textContent = '👤 بروفايل الموظف';
+            const now = new Date();
+            profileViewY = now.getFullYear();
+            profileViewM = now.getMonth() + 1;
+            renderProfileBody(empId);
+        }
+
+        function renderProfileBody(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+            const content = document.getElementById('profile-modal-content');
+            const now = new Date();
+            const dim = daysInMonth(profileViewY, profileViewM);
+            const monthDates = [];
+            for (let d = 1; d <= dim; d++) monthDates.push(`${profileViewY}-${pad(profileViewM)}-${pad(d)}`);
+            const isCurrentMonth = (profileViewY === now.getFullYear() && profileViewM === now.getMonth() + 1);
+            const relevantDates = isCurrentMonth ? monthDates.filter(d => new Date(d + 'T12:00:00') <= now) : monthDates;
+            const monthStats = getEmpStatsForRange(empId, relevantDates);
+            const elapsedDays = monthStats.present + monthStats.absent;
+            const absencePct = elapsedDays > 0 ? ((monthStats.absent / elapsedDays) * 100).toFixed(1) : '0.0';
+            const daysGrid = monthDates.map(d => {
+                const dObj = new Date(d + 'T12:00:00');
+                const isFuture = isCurrentMonth && dObj > now;
+                const isOff = isOffDay(emp.shift, d);
+                const rec = log[d] && log[d][empId];
+                let cls = 'dp-present',
+                    icon = '✓';
+                if (isOff) { cls = 'dp-unreg';
+                    icon = '🔄'; }
+                if (rec === 'absent') { cls = 'dp-absent';
+                    icon = '✕'; }
+                if (isFuture && !isOff) cls += ' dp-unreg';
+                return `<div class="day-pill ${cls}" data-day="${d}" style="cursor:${isOff?'default':'pointer'};" title="${isOff?'إجازة':''} اضغط لتبديل الحالة">
+                  <div class="dp-day">${dObj.getDate()}</div>
+                  <div class="dp-status">${isFuture && !isOff ? '' : icon}</div>
+                </div>`;
+            }).join('');
+            const initial = (emp.name || '؟').trim().charAt(0);
+            content.innerHTML = `
+            <div class="profile-hero">
+                <div class="profile-avatar">${esc(initial)}</div>
+                <div class="profile-info">
+                    <h3>${esc(emp.name)}</h3>
+                    <div class="badges">
+                        ${shiftBadge(emp.shift)} ${lineBadge(emp.line)} ${catBadge(emp.cat)}
+                    </div>
+                </div>
+            </div>
+            <div class="profile-stats-grid">
+                <div class="profile-stat">
+                    <div class="ps-label">حضور ${MONTH_AR[profileViewM-1]}</div>
+                    <div class="ps-val" style="color:var(--green);">${monthStats.present}</div>
+                    <div class="ps-sub">من ${relevantDates.length} يوم عمل</div>
+                </div>
+                <div class="profile-stat">
+                    <div class="ps-label">غياب ${MONTH_AR[profileViewM-1]}</div>
+                    <div class="ps-val" style="color:var(--red);">${monthStats.absent}</div>
+                    <div class="ps-sub">نسبة الغياب ${absencePct}%</div>
+                </div>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div class="profile-section-title" style="margin-bottom:0;">أيام الغياب — اضغط على أي يوم لتبديل حالته</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button class="btn-icon" id="profile-prev-month" style="border:1px solid var(--border);" title="الشهر السابق">◀</button>
+                        <span style="font-size:12px;color:var(--text2);min-width:90px;text-align:center;">${MONTH_AR[profileViewM-1]} ${profileViewY}</span>
+                        <button class="btn-icon" id="profile-next-month" style="border:1px solid var(--border);" title="الشهر التالي">▶</button>
+                    </div>
+                </div>
+                <div class="profile-week-bar" style="flex-wrap:wrap;" id="profile-days-grid">${daysGrid}</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-primary" id="profile-edit-btn">✏️ تعديل البيانات</button>
+                <button class="btn btn-danger" id="profile-month-absent-btn">🗓 تغييب كل أيام العمل</button>
+                <button class="btn" id="profile-month-clear-btn">↺ مسح غياب الشهر</button>
+                <button class="btn btn-danger" id="profile-delete-btn">🗑 حذف الموظف</button>
+            </div>`;
+            document.getElementById('profile-modal').classList.add('open');
+            document.getElementById('profile-edit-btn').addEventListener('click', () => editEmployee(empId));
+            document.getElementById('profile-month-absent-btn').addEventListener('click', () => setProfileMonthBulk(empId, 'absent'));
+            document.getElementById('profile-month-clear-btn').addEventListener('click', () => setProfileMonthBulk(empId, 'clear'));
+            document.getElementById('profile-prev-month').addEventListener('click', () => changeProfileMonth(empId, -1));
+            document.getElementById('profile-next-month').addEventListener('click', () => changeProfileMonth(empId, 1));
+            content.querySelectorAll('#profile-days-grid [data-day]').forEach(el => {
+                const day = el.dataset.day;
+                const isOff = isOffDay(emp.shift, day);
+                if (!isOff) {
+                    el.addEventListener('click', () => toggleProfileDay(empId, day));
+                }
+            });
+            document.getElementById('profile-delete-btn').addEventListener('click', () => {
+                if (confirm(`متأكد من حذف "${emp.name}"؟ سيتم حذف كل سجلات حضوره أيضاً.`)) {
+                    employees = employees.filter(e => e.id !== empId);
+                    saveEmployees(employees);
+                    Object.keys(log).forEach(d => { if (log[d] && log[d][empId] !== undefined) delete log[d][
+                            empId
+                        ]; });
+                    saveLog(log);
+                    closeModal();
+                    renderEmployees(document.getElementById('search-emp').value);
+                    toast('تم حذف الموظف 🗑');
+                }
+            });
+        }
+
+        function editEmployee(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+            modalMode = 'edit';
+            document.getElementById('modal-title').textContent = '✏️ تعديل بيانات الموظف';
+            const content = document.getElementById('profile-modal-content');
+            const availableLines = emp.shift ? getLinesForShift(emp.shift) : LINES;
+            content.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <label>الاسم:</label>
+              <input type="text" id="edit-emp-name" value="${esc(emp.name)}" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px;border-radius:var(--radius-sm);" />
+              <label>الوردية:</label>
+              <select id="edit-emp-shift" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px;border-radius:var(--radius-sm);">
+                <option value="">—</option>
+                <option value="sabahi" ${emp.shift==='sabahi'?'selected':''}>☀️ صباحي</option>
+                <option value="masai" ${emp.shift==='masai'?'selected':''}>🌙 مسائي</option>
+              </select>
+              <label>الخط:</label>
+              <select id="edit-emp-line" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px;border-radius:var(--radius-sm);">
+                ${availableLines.map(l => `<option value="${l.key}" ${emp.line===l.key?'selected':''}>${l.label}</option>`).join('')}
+              </select>
+              <label>الفئة:</label>
+              <select id="edit-emp-cat" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px;border-radius:var(--radius-sm);">
+                ${CATS.map(c => `<option value="${c.key}" ${emp.cat===c.key?'selected':''}>${c.label}</option>`).join('')}
+              </select>
+              <div style="display:flex;gap:10px;margin-top:10px;">
+                <button class="btn btn-primary" id="save-edit-btn">💾 حفظ</button>
+                <button class="btn" id="cancel-edit-btn">إلغاء</button>
+              </div>
+            </div>`;
+            document.getElementById('profile-modal').classList.add('open');
+            const shiftSelect = document.getElementById('edit-emp-shift');
+            const lineSelect = document.getElementById('edit-emp-line');
+            shiftSelect.addEventListener('change', () => {
+                const shift = shiftSelect.value;
+                const lines = shift ? getLinesForShift(shift) : LINES;
+                lineSelect.innerHTML = lines.map(l => `<option value="${l.key}">${l.label}</option>`).join('');
+            });
+            document.getElementById('save-edit-btn').addEventListener('click', () => {
+                const name = document.getElementById('edit-emp-name').value.trim();
+                if (!name) { alert('الاسم مطلوب'); return; }
+                emp.name = name;
+                emp.shift = document.getElementById('edit-emp-shift').value;
+                emp.line = document.getElementById('edit-emp-line').value;
+                emp.cat = document.getElementById('edit-emp-cat').value;
+                saveEmployees(employees);
+                closeModal();
+                renderEmployees(document.getElementById('search-emp').value);
+                toast('تم تعديل الموظف ✓');
+            });
+            document.getElementById('cancel-edit-btn').addEventListener('click', closeModal);
+        }
+
+        function closeModal() { document.getElementById('profile-modal').classList.remove('open');
+            modalMode = 'profile';
+            document.getElementById('modal-title').textContent = '👤 بروفايل الموظف'; }
+        document.getElementById('profile-modal-close').addEventListener('click', closeModal);
+        document.getElementById('profile-modal').addEventListener('click', e => { if (e.target === document.getElementById(
+                'profile-modal')) closeModal(); });
+
+        // ══════════════════════════════════════════════
+        //  EMPLOYEES
+        // ══════════════════════════════════════════════
+        function renderEmployees(filter = '') {
+            const wrap = document.getElementById('emp-list');
+            const q = (filter || '').trim().toLowerCase();
+            let list = employees.slice();
+            if (q) list = list.filter(e => (e.name || '').toLowerCase().includes(q));
+            document.getElementById('emp-count-label').textContent = `${list.length} موظف`;
+            if (employees.length === 0) {
+                wrap.innerHTML = `<div class="empty">لا يوجد موظفين بعد. ابدأ بإضافة موظف جديد ⬆️</div>`;
+                return;
+            }
+            if (list.length === 0) {
+                wrap.innerHTML = `<div class="empty">لا توجد نتائج مطابقة للبحث 🔍</div>`;
+                return;
+            }
+            const shifts = ['sabahi', 'masai'];
+            let html = '';
+            shifts.forEach(shift => {
+                const shiftEmps = list.filter(e => e.shift === shift);
+                if (shiftEmps.length === 0) return;
+                html +=
+                    `<div style="font-size:14px;font-weight:700;margin:1.25rem 0 .75rem;color:var(--text2);">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'}</div>`;
+                const activeLines = getLinesForShift(shift);
+                const lineKeys = activeLines.map(l => l.key);
+                html += `<div class="lines-horizontal-grid">`;
+                lineKeys.forEach(lk => {
+                    const lineEmps = shiftEmps.filter(e => e.line === lk);
+                    const lcCls = { l1: 'lc-l1', l2: 'lc-l2', l3: 'lc-l3', lx: 'lc-lx' } [lk] || '';
+                    html += `<div class="line-card ${lcCls}">
+                        <div class="line-card-header">${LINE_LABEL[lk]} <span class="emp-line-count">(${lineEmps.length})</span></div>
+                        <div class="line-card-body">`;
+                    if (lineEmps.length === 0) {
+                        html += `<div class="empty-line-msg">لا يوجد موظفين</div>`;
+                    } else {
+                        html += lineEmps.map(e => empRowHtml(e)).join('');
+                    }
+                    html += `</div></div>`;
+                });
+                const others = shiftEmps.filter(e => !lineKeys.includes(e.line));
+                if (others.length > 0) {
+                    html += `<div class="line-card lc-none">
+                        <div class="line-card-header">بدون خط محدد <span class="emp-line-count">(${others.length})</span></div>
+                        <div class="line-card-body">${others.map(e => empRowHtml(e)).join('')}</div>
+                    </div>`;
+                }
+                html += `</div>`;
+            });
+            const noShift = list.filter(e => !e.shift);
+            if (noShift.length > 0) {
+                html +=
+                    `<div style="font-size:14px;font-weight:700;margin:1.25rem 0 .75rem;color:var(--text2);">⚪ بدون وردية</div>`;
+                html += `<div class="lines-horizontal-grid"><div class="line-card lc-none"><div class="line-card-header">بدون وردية <span class="emp-line-count">(${noShift.length})</span></div><div class="line-card-body">${noShift.map(e => empRowHtml(e)).join('')}</div></div></div>`;
+            }
+            wrap.innerHTML = html;
+            wrap.querySelectorAll('[data-profile]').forEach(btn => {
+                btn.addEventListener('click', () => openProfile(btn.dataset.profile));
+            });
+            wrap.querySelectorAll('[data-edit]').forEach(btn => {
+                btn.addEventListener('click', () => editEmployee(btn.dataset.edit));
+            });
+            wrap.querySelectorAll('[data-delete]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const emp = employees.find(x => x.id === btn.dataset.delete);
+                    if (!emp) return;
+                    if (confirm(`متأكد من حذف "${emp.name}"؟`)) {
+                        employees = employees.filter(e => e.id !== emp.id);
+                        saveEmployees(employees);
+                        Object.keys(log).forEach(d => { if (log[d] && log[d][emp.id] !== undefined) delete log[d][
+                                emp.id
+                            ]; });
+                        saveLog(log);
+                        renderEmployees(document.getElementById('search-emp').value);
+                        toast('تم حذف الموظف 🗑');
+                    }
+                });
+            });
+        }
+
+        function empRowHtml(e) {
+            return `<div class="emp-row">
+                <div style="flex:1;">
+                    <p class="emp-name">${esc(e.name)}</p>
+                    <p class="emp-meta">${shiftBadge(e.shift)} ${lineBadge(e.line)} ${catBadge(e.cat)}</p>
+                </div>
+                <button class="emp-profile-btn" data-profile="${e.id}">عرض البروفايل</button>
+                <button class="edit-btn" data-edit="${e.id}">✏️</button>
+                <button class="btn-icon" data-delete="${e.id}">🗑</button>
+            </div>`;
+        }
+        document.getElementById('search-emp').addEventListener('input', function() { renderEmployees(this.value); });
+        document.getElementById('add-emp-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('emp-name');
+            const name = nameInput.value.trim();
+            if (!name) { alert('من فضلك اكتب اسم الموظف');
+                nameInput.focus(); return; }
+            const shift = document.getElementById('emp-shift').value;
+            const line = document.getElementById('emp-line').value;
+            const cat = document.getElementById('emp-cat').value;
+            const newEmp = { id: genId(), name, shift, line, cat };
+            employees.push(newEmp);
+            saveEmployees(employees);
+            nameInput.value = '';
+            document.getElementById('emp-shift').value = '';
+            document.getElementById('emp-line').innerHTML = '<option value="">— الخط —</option>';
+            document.getElementById('emp-cat').value = '';
+            nameInput.focus();
+            renderEmployees(document.getElementById('search-emp').value);
+            toast(`تمت إضافة "${name}" ✓`);
+        });
+        document.getElementById('emp-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById(
+                'add-emp-btn').click(); });
+        document.getElementById('delete-all-btn').addEventListener('click', function() {
+            if (employees.length === 0) { toast('لا يوجد موظفين لحذفهم'); return; }
+            if (confirm('⚠️ متأكد من مسح كل الموظفين وكل سجلات الحضور؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+                employees = [];
+                log = {};
+                rosterOrder = {};
+                saveEmployees(employees);
+                saveLog(log);
+                saveRosterOrder(rosterOrder);
+                renderEmployees('');
+                toast('تم مسح كل البيانات 🗑');
+            }
+        });
+
+        // ══════════════════════════════════════════════
+        //  DAILY
+        // ══════════════════════════════════════════════
+        function setAttendance(empId, date, status) {
+            const emp = employees.find(e => e.id === empId);
+            if (isOffDay(emp?.shift, date)) { toast('هذا اليوم إجازة لهذه الوردية'); return; }
+            if (!log[date]) log[date] = {};
+            if (status === null) { delete log[date][empId]; } else { log[date][empId] = status; }
+            saveLog(log);
+        }
+
+        function renderDaily() {
+            const date = document.getElementById('daily-date').value || todayStr();
+            document.getElementById('daily-day-name').textContent = dayName(date);
+            const wrap = document.getElementById('daily-list');
+            const q = (document.getElementById('search-daily').value || '').trim().toLowerCase();
+            if (employees.length === 0) {
+                wrap.innerHTML =
+                    `<div class="empty">لا يوجد موظفين بعد. أضف موظفين من تبويب "الموظفين" أولاً.</div>`;
+                return;
+            }
+            let list = employees.slice();
+            if (q) list = list.filter(e => (e.name || '').toLowerCase().includes(q));
+            if (list.length === 0) {
+                wrap.innerHTML = `<div class="empty">لا توجد نتائج مطابقة للبحث 🔍</div>`;
+                return;
+            }
+            const dayLog = log[date] || {};
+            const shifts = ['sabahi', 'masai'];
+            let html = '';
+            shifts.forEach(shift => {
+                const shiftEmps = list.filter(e => e.shift === shift);
+                if (shiftEmps.length === 0) return;
+                const activeLines = getLinesForShift(shift);
+                html +=
+                    `<div class="daily-group-header">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'}</div>`;
+                html += `<div class="lines-horizontal-grid">`;
+                activeLines.forEach(l => {
+                    const lineEmps = shiftEmps.filter(e => e.line === l.key);
+                    const lcCls = { l1: 'lc-l1', l2: 'lc-l2', l3: 'lc-l3', lx: 'lc-lx' } [l.key] || '';
+                    html += `<div class="line-card ${lcCls}">
+                        <div class="line-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                            <span>${l.label} <span style="opacity:.7;font-weight:400;font-size:10px;">(${lineEmps.length})</span></span>
+                            <button class="btn-mass-absent" onclick="markAllAbsent('${shift}','${l.key}','${date}')">✕ تغييب الكل</button>
+                        </div>
+                        <div class="line-card-body">`;
+                    if (lineEmps.length === 0) {
+                        html += `<div class="empty-line-msg">لا يوجد موظفين</div>`;
+                    } else {
+                        lineEmps.forEach(e => { html += dailyRowHtml(e, dayLog[e.id], date); });
+                    }
+                    html += `</div></div>`;
+                });
+                const others = shiftEmps.filter(e => !activeLines.map(l => l.key).includes(e.line));
+                if (others.length > 0) {
+                    html += `<div class="line-card lc-none">
+                        <div class="line-card-header">بدون خط محدد <span style="opacity:.7;font-weight:400;font-size:10px;">(${others.length})</span></div>
+                        <div class="line-card-body">${others.map(e => dailyRowHtml(e, dayLog[e.id], date)).join('')}</div>
+                    </div>`;
+                }
+                html += `</div>`;
+            });
+            const noShift = list.filter(e => !e.shift);
+            if (noShift.length > 0) {
+                html += `<div class="daily-group-header">⚪ بدون وردية</div>`;
+                html +=
+                    `<div class="lines-horizontal-grid"><div class="line-card lc-none"><div class="line-card-body">${noShift.map(e => dailyRowHtml(e, dayLog[e.id], date)).join('')}</div></div></div>`;
+            }
+            wrap.innerHTML = html;
+            wrap.querySelectorAll('[data-absent]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setAttendance(btn.dataset.absent, date, 'absent');
+                    renderDaily();
+                });
+            });
+            wrap.querySelectorAll('[data-clear]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setAttendance(btn.dataset.clear, date, null);
+                    renderDaily();
+                });
+            });
+        }
+
+        function dailyRowHtml(e, status, date) {
+            const isAbsent = status === 'absent';
+            const isOff = isOffDay(e.shift, date);
+            let statusText = '✓ حاضر',
+                statusColor = 'var(--green)';
+            if (isOff) { statusText = '🔄 إجازة';
+                statusColor = 'var(--text3)'; } else if (isAbsent) { statusText = '✕ غائب';
+                statusColor = 'var(--red)'; }
+            return `<div class="daily-row">
+                <div style="flex:1;">
+                    <p class="emp-name" style="${isAbsent?'text-decoration:line-through;opacity:.6;':''}">${esc(e.name)}</p>
+                    <p class="emp-meta">${lineBadge(e.line)} ${catBadge(e.cat)}</p>
+                </div>
+                <div class="daily-btns">
+                    <span style="font-size:11px;color:${statusColor};font-weight:600;margin-left:8px;">${statusText}</span>
+                    ${isOff ? '' : (isAbsent
+                      ? `<button class="btn-icon" data-clear="${e.id}" title="إلغاء الغياب (يعود حاضراً)">↺ إلغاء</button>`
+                      : `<button class="btn btn-danger" data-absent="${e.id}" title="تسجيل غياب">✕ غائب</button>`)}
+                </div>
+            </div>`;
+        }
+        document.getElementById('daily-date').addEventListener('change', renderDaily);
+        document.getElementById('search-daily').addEventListener('input', renderDaily);
+        window.markAllAbsent = function(shift, lineKey, date) {
+            const targets = employees.filter(e => e.shift === shift && e.line === lineKey && !isOffDay(shift, date));
+            if (targets.length === 0) { toast('لا يوجد موظفين غير إجازة'); return; }
+            if (!log[date]) log[date] = {};
+            targets.forEach(e => { log[date][e.id] = 'absent'; });
+            saveLog(log);
+            renderDaily();
+            toast(`تم تسجيل غياب ${targets.length} موظف ✕`);
+        };
+
+        // ══════════════════════════════════════════════
+        //  MONTHLY
+        // ══════════════════════════════════════════════
+        function renderMonthly() {
+            const monthVal = document.getElementById('monthly-month').value || monthStr();
+            const [y, m] = monthVal.split('-').map(Number);
+            const dim = daysInMonth(y, m);
+            const table = document.getElementById('monthly-table');
+            if (employees.length === 0) {
+                table.innerHTML =
+                    `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">لا يوجد موظفين بعد</td></tr>`;
+                return;
+            }
+            const q = (document.getElementById('search-monthly').value || '').trim().toLowerCase();
+            let filteredEmps = employees.slice();
+            if (q) filteredEmps = filteredEmps.filter(e => (e.name || '').toLowerCase().includes(q));
+            if (filteredEmps.length === 0) {
+                table.innerHTML =
+                    `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">لا توجد نتائج مطابقة للبحث 🔍</td></tr>`;
+                return;
+            }
+            let theadCells = `<th class="name-header">الموظف</th><th>حاضر</th><th>غائب</th><th>غياب%</th>`;
+            for (let d = 1; d <= dim; d++) {
+                const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+                theadCells +=
+                    `<th title="${DAYS_AR[new Date(dateStr+'T12:00:00').getDay()]}">${d}</th>`;
+            }
+            const todayD = new Date();
+            const empRows = filteredEmps.map(e => {
+                let cellsHtml = '';
+                let present = 0,
+                    absent = 0;
+                for (let d = 1; d <= dim; d++) {
+                    const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+                    const cellDate = new Date(y, m - 1, d);
+                    const isOff = isOffDay(e.shift, dateStr);
+                    const rec = log[dateStr] && log[dateStr][e.id];
+                    if (isOff) {
+                        cellsHtml += `<td class="cell-offday">—</td>`;
+                        continue;
+                    }
+                    if (cellDate > todayD) {
+                        cellsHtml += `<td class="cell-empty"></td>`;
+                        continue;
+                    }
+                    if (rec === 'absent') { cellsHtml += `<td class="cell-absent">✕</td>`;
+                        absent++; } else { cellsHtml += `<td class="cell-present">✓</td>`;
+                        present++; }
+                }
+                const elapsed = present + absent;
+                const pct = elapsed > 0 ? (absent / elapsed) * 100 : 0;
+                return { emp: e, cellsHtml, present, absent, pct };
+            });
+            empRows.sort((a, b) => b.pct - a.pct || (a.emp.name || '').localeCompare(b.emp.name || '', 'ar'));
+            let rows = '';
+            empRows.forEach(r => {
+                const pctStr = r.pct.toFixed(1);
+                rows += `<tr><td class="name-cell">${esc(r.emp.name)}</td>
+                         <td style="color:var(--green);font-weight:700;">${r.present}</td>
+                         <td style="color:var(--red);font-weight:700;">${r.absent}</td>
+                         <td style="font-weight:700;">${pctStr}%</td>${r.cellsHtml}</tr>`;
+            });
+            table.innerHTML = `<thead><tr>${theadCells}</tr></thead><tbody>${rows}</tbody>`;
+        }
+        document.getElementById('monthly-month').addEventListener('change', renderMonthly);
+        document.getElementById('search-monthly').addEventListener('input', renderMonthly);
+
+        // ══════════════════════════════════════════════
+        //  SUMMARY — يعرض فقط الغائبين
+        // ══════════════════════════════════════════════
+        function renderSummary() {
+            const date = document.getElementById('summary-date').value || todayStr();
+            document.getElementById('summary-day-name').textContent = dayName(date);
+            const dayLog = log[date] || {};
+            let absent = 0,
+                offCount = 0;
+            employees.forEach(e => {
+                if (isOffDay(e.shift, date)) { offCount++; return; }
+                if (dayLog[e.id] === 'absent') absent++;
+            });
+            const total = employees.length - offCount;
+            const present = total - absent;
+            const pct = total > 0 ? ((absent / total) * 100).toFixed(1) : '0.0';
+
+            // بطاقات إحصائية مبسطة
+            document.getElementById('summary-metrics').innerHTML = `
+                <div class="metric-card"><div class="metric-label">✅ حاضر</div><div class="metric-value" style="color:var(--green);">${present}</div></div>
+                <div class="metric-card"><div class="metric-label">❌ غائب</div><div class="metric-value" style="color:var(--red);">${absent}</div></div>
+                <div class="metric-card"><div class="metric-label">📊 نسبة الغياب</div><div class="metric-value" style="color:var(--amber);">${pct}%</div></div>
+            `;
+
+            // جدول: فقط الموظفين الغائبين (مع استبعاد الإجازات)
+            const table = document.getElementById('summary-table');
+            if (employees.length === 0) {
+                table.innerHTML = `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">لا يوجد موظفين بعد</td></tr>`;
+                return;
+            }
+            const absentEmployees = employees.filter(e => {
+                if (isOffDay(e.shift, date)) return false;
+                return dayLog[e.id] === 'absent';
+            });
+            if (absentEmployees.length === 0) {
+                table.innerHTML = `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">🎉 لا يوجد غياب اليوم</td></tr>`;
+                return;
+            }
+            let rows = '';
+            absentEmployees.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar')).forEach(e => {
+                rows += `<tr>
+                    <td style="text-align:right;">${esc(e.name)}</td>
+                    <td class="pct" style="color:var(--red);">غائب</td>
+                </tr>`;
+            });
+            table.innerHTML = `<thead><tr><th style="text-align:right;">الاسم</th><th style="text-align:center;">الحالة</th></tr></thead><tbody>${rows}</tbody>`;
+        }
+        document.getElementById('summary-date').addEventListener('change', renderSummary);
+
+        // ══════════════════════════════════════════════
+        //  ROSTER
+        // ══════════════════════════════════════════════
+        let rosterMode = 'full';
+        document.getElementById('mode-full').addEventListener('click', () => { rosterMode = 'full';
+            document.getElementById('mode-full').classList.add('active');
+            document.getElementById('mode-present').classList.remove('active');
+            renderRoster(); });
+        document.getElementById('mode-present').addEventListener('click', () => { rosterMode = 'present';
+            document.getElementById('mode-present').classList.add('active');
+            document.getElementById('mode-full').classList.remove('active');
+            renderRoster(); });
+        document.getElementById('roster-date').addEventListener('change', renderRoster);
+
+        function buildLineCls(lkey) { return { l1: 'lg-l1', l2: 'lg-l2', l3: 'lg-l3', lx: 'lg-lx' } [lkey] || ''; }
+
+        function getOrderedEmps(shift, lineKey, catKey, allEmps) {
+            const groupKey = `${shift}|${lineKey}|${catKey}`;
+            const ids = (rosterOrder[groupKey] || []).slice();
+            const empMap = Object.fromEntries(allEmps.map(e => [e.id, e]));
+            const ordered = [];
+            ids.forEach(id => { if (empMap[id]) { ordered.push(empMap[id]);
+                    delete empMap[id]; } });
+            Object.values(empMap).forEach(e => ordered.push(e));
+            return ordered;
+        }
+
+        function saveOrder(shift, lineKey, catKey, ids) { const groupKey = `${shift}|${lineKey}|${catKey}`;
+            rosterOrder[groupKey] = ids;
+            saveRosterOrder(rosterOrder); }
+
+        function renderRoster() {
+            const date = document.getElementById('roster-date').value || todayStr();
+            document.getElementById('roster-day').textContent = dayName(date);
+            const wrap = document.getElementById('roster-content');
+            const dayLog = log[date] || {};
+            if (employees.length === 0) {
+                wrap.innerHTML =
+                    `<div class="empty">لا يوجد موظفين بعد. أضف موظفين من تبويب "الموظفين" أولاً.</div>`;
+                return;
+            }
+            const shifts = [
+                { key: 'sabahi', label: '☀️ صباحي', cls: 'shift-sabahi' },
+                { key: 'masai', label: '🌙 مسائي', cls: 'shift-masai' },
+            ];
+            let html = `<div class="roster-wrap">`;
+            shifts.forEach(shift => {
+                let shiftEmps = employees.filter(e => e.shift === shift.key);
+                if (rosterMode === 'present') { shiftEmps = shiftEmps.filter(e => dayLog[e.id] !== 'absent' && !isOffDay(
+                        shift.key, date)); }
+                const activeLines = getLinesForShift(shift.key);
+                let totalCount = shiftEmps.length;
+                let absentCount = shiftEmps.filter(e => dayLog[e.id] === 'absent' && !isOffDay(shift.key, date))
+                    .length;
+                let presentCount = totalCount - absentCount;
+                html += `<div class="roster-shift ${shift.cls}">
+                    <div class="roster-shift-hdr">${shift.label} (${totalCount})</div>`;
+                if (activeLines.length === 0) {
+                    html +=
+                        `<div class="empty-line-msg">لا توجد خطوط مفعّلة لهذه الوردية. فعّل الخطوط من إعدادات الموظفين.</div>`;
+                } else {
+                    activeLines.forEach(l => {
+                        const lineEmps = shiftEmps.filter(e => e.line === l.key);
+                        html +=
+                            `<div class="line-group ${buildLineCls(l.key)}">
+                            <div class="line-group-hdr">${l.label} <span style="opacity:.7;font-weight:400;">(${lineEmps.length})</span></div>
+                            <div class="cat-row">`;
+                        CATS.forEach(c => {
+                            const catEmps = getOrderedEmps(shift.key, l.key, c.key, lineEmps.filter(
+                                e => e.cat === c.key));
+                            html +=
+                                `<div class="cat-col" data-shift="${shift.key}" data-line="${l.key}" data-cat="${c.key}">
+                                <div class="cat-title">${c.label}</div>
+                                <div class="cat-col-body" data-shift="${shift.key}" data-line="${l.key}" data-cat="${c.key}">`;
+                            if (catEmps.length === 0) { html +=
+                                    `<div class="r-empty">—</div>`; } else {
+                                catEmps.forEach(e => {
+                                    const isAbsent = dayLog[e.id] === 'absent' && !isOffDay(shift
+                                        .key, date);
+                                    const isOff = isOffDay(shift.key, date);
+                                    const absentCls = isAbsent ? 'r-name-absent' : '';
+                                    const offCls = isOff ? 'r-name-absent' : '';
+                                    html +=
+                                        `<div class="r-name ${absentCls} ${offCls}" draggable="true" data-id="${e.id}" data-shift="${shift.key}" data-line="${l.key}" data-cat="${c.key}">${esc(e.name)}</div>`;
+                                });
+                            }
+                            html += `</div></div>`;
+                        });
+                        html += `</div></div>`;
+                    });
+                }
+                html += `<div class="roster-stats-bar">
+                    <div class="rstat"><div class="rs-label">الإجمالي</div><div class="rs-val">${totalCount}</div></div>
+                    <div class="rstat"><div class="rs-label">حاضر</div><div class="rs-val" style="color:var(--green);">${presentCount}</div></div>
+                    <div class="rstat"><div class="rs-label">غائب</div><div class="rs-val" style="color:var(--red);">${absentCount}</div></div>
+                    <div class="rstat"><div class="rs-label">نسبة الحضور</div><div class="rs-val" style="color:var(--text);">${totalCount>0?((presentCount/totalCount)*100).toFixed(1):'0'}%</div></div>
+                </div></div>`;
+            });
+            html += `</div>`;
+            wrap.innerHTML = html;
+            attachDragEvents(wrap);
+        }
+
+        function attachDragEvents(wrap) {
+            let draggedEl = null;
+            let draggedData = null;
+            wrap.querySelectorAll('.r-name').forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    draggedEl = el;
+                    draggedData = { id: el.dataset.id, shift: el.dataset.shift, line: el.dataset.line,
+                        cat: el.dataset.cat };
+                    el.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    try { e.dataTransfer.setData('text/plain', el.dataset.id); } catch (err) {}
+                });
+                el.addEventListener('dragend', () => {
+                    el.classList.remove('dragging');
+                    clearDropHighlights(wrap);
+                    draggedEl = null;
+                    draggedData = null;
+                });
+                el.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    if (!draggedEl || draggedEl === el) return;
+                    const rect = el.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    clearDropHighlights(wrap);
+                    if (e.clientY < midY) el.classList.add('drag-over-top');
+                    else el.classList.add('drag-over-bottom');
+                });
+                el.addEventListener('drop', e => {
+                    e.preventDefault();
+                    if (!draggedData) return;
+                    const rect = el.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    const insertBefore = e.clientY < midY;
+                    performDrop({
+                        empId: draggedData.id,
+                        fromShift: draggedData.shift,
+                        fromLine: draggedData.line,
+                        fromCat: draggedData.cat,
+                        toShift: el.dataset.shift,
+                        toLine: el.dataset.line,
+                        toCat: el.dataset.cat,
+                        targetEmpId: el.dataset.id,
+                        insertBefore
+                    });
+                });
+            });
+            wrap.querySelectorAll('.cat-col-body').forEach(col => {
+                col.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    if (col.children.length === 0 || (col.children.length === 1 && col.querySelector(
+                            '.r-empty'))) {
+                        col.closest('.cat-col').classList.add('drop-target-empty');
+                    }
+                });
+                col.addEventListener('dragleave', () => { col.closest('.cat-col').classList.remove(
+                        'drop-target-empty'); });
+                col.addEventListener('drop', e => {
+                    e.preventDefault();
+                    col.closest('.cat-col').classList.remove('drop-target-empty');
+                    if (!draggedData) return;
+                    if (e.target === col || e.target.classList.contains('r-empty')) {
+                        performDrop({
+                            empId: draggedData.id,
+                            fromShift: draggedData.shift,
+                            fromLine: draggedData.line,
+                            fromCat: draggedData.cat,
+                            toShift: col.dataset.shift,
+                            toLine: col.dataset.line,
+                            toCat: col.dataset.cat,
+                            targetEmpId: null,
+                            insertBefore: true
+                        });
+                    }
+                });
+            });
+        }
+
+        function clearDropHighlights(wrap) {
+            wrap.querySelectorAll('.drag-over-top').forEach(el => el.classList.remove('drag-over-top'));
+            wrap.querySelectorAll('.drag-over-bottom').forEach(el => el.classList.remove('drag-over-bottom'));
+            wrap.querySelectorAll('.drop-target-empty').forEach(el => el.classList.remove('drop-target-empty'));
+        }
+
+        function performDrop(info) {
+            const { empId, fromShift, fromLine, fromCat, toShift, toLine, toCat, targetEmpId, insertBefore } = info;
+            const emp = employees.find(e => e.id === empId);
+            if (emp && (fromLine !== toLine || fromCat !== toCat || fromShift !== toShift)) {
+                emp.line = toLine;
+                emp.cat = toCat;
+                if (fromShift !== toShift) emp.shift = toShift;
+                saveEmployees(employees);
+            }
+            const groupKey = `${toShift}|${toLine}|${toCat}`;
+            const destEmps = employees.filter(e => e.shift === toShift && e.line === toLine && e.cat === toCat);
+            let orderedIds = getOrderedEmps(toShift, toLine, toCat, destEmps).map(e => e.id);
+            orderedIds = orderedIds.filter(id => id !== empId);
+            if (targetEmpId && orderedIds.includes(targetEmpId)) {
+                const idx = orderedIds.indexOf(targetEmpId);
+                const insertIdx = insertBefore ? idx : idx + 1;
+                orderedIds.splice(insertIdx, 0, empId);
+            } else { orderedIds.push(empId); }
+            saveOrder(toShift, toLine, toCat, orderedIds);
+            if (fromShift !== toShift || fromLine !== toLine || fromCat !== toCat) {
+                const fromGroupKey = `${fromShift}|${fromLine}|${fromCat}`;
+                if (rosterOrder[fromGroupKey]) { rosterOrder[fromGroupKey] = rosterOrder[fromGroupKey].filter(id => id !==
+                        empId);
+                    saveRosterOrder(rosterOrder); }
+            }
+            renderRoster();
+        }
+
+        // ══════════════════════════════════════════════
+        //  DASHBOARD — رسم بياني محسّن
+        // ══════════════════════════════════════════════
+        function renderDashboard() {
+            const wrap = document.getElementById('dash-content');
+            if (employees.length === 0) {
+                wrap.innerHTML =
+                    `<div class="empty">لا يوجد موظفين بعد. ابدأ بإضافة موظفين من تبويب "الموظفين" 👥</div>`;
+                return;
+            }
+            const today = todayStr();
+            const dayLog = log[today] || {};
+            let absent = 0,
+                offCount = 0;
+            employees.forEach(e => {
+                if (isOffDay(e.shift, today)) { offCount++; return; }
+                if (dayLog[e.id] === 'absent') absent++;
+            });
+            const total = employees.length;
+            const totalWork = total - offCount;
+            const present = totalWork - absent;
+            const attendancePct = totalWork > 0 ? ((present / totalWork) * 100).toFixed(1) : '0.0';
+
+            const dashMonthVal = document.getElementById('dash-month').value || monthStr();
+            const [y, m] = dashMonthVal.split('-').map(Number);
+            const now = new Date();
+            const dim = daysInMonth(y, m);
+            let monthAbsent = 0,
+                monthWorkDays = 0;
+            const empAbsenceMap = {};
+            employees.forEach(e => { empAbsenceMap[e.id] = { absent: 0, present: 0 }; });
+            for (let d = 1; d <= dim; d++) {
+                const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+                if (new Date(dateStr + 'T12:00:00') > now) continue;
+                const dl = log[dateStr] || {};
+                employees.forEach(e => {
+                    if (isOffDay(e.shift, dateStr)) return;
+                    monthWorkDays++;
+                    const rec = dl[e.id];
+                    if (rec === 'absent') { monthAbsent++;
+                        empAbsenceMap[e.id].absent++; } else { empAbsenceMap[e.id].present++; }
+                });
+            }
+            const monthPresent = monthWorkDays - monthAbsent;
+            const monthAbsencePct = monthWorkDays > 0 ? ((monthAbsent / monthWorkDays) * 100).toFixed(1) : '0.0';
+
+            const top5 = employees.map(e => {
+                const stat = empAbsenceMap[e.id];
+                const elapsed = stat.present + stat.absent;
+                const pct = elapsed > 0 ? (stat.absent / elapsed) * 100 : 0;
+                return { name: e.name, absent: stat.absent, pct };
+            }).filter(x => x.absent > 0).sort((a, b) => b.pct - a.pct).slice(0, 5);
+            const maxPct = top5.length > 0 ? Math.max(...top5.map(x => x.pct), 1) : 1;
+            const barChartHtml = top5.length === 0 ?
+                `<div class="empty-line-msg">لا توجد بيانات غياب كافية بعد</div>` :
+                top5.map((x, i) => `
+                <div class="bar-row">
+                    <div class="bar-rank">${i+1}</div>
+                    <div class="bar-name">${esc(x.name)}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${(x.pct/maxPct*100).toFixed(1)}%;background:linear-gradient(90deg, var(--red), #b91c1c);">
+                            <span class="bar-fill-val">${x.absent}</span>
+                        </div>
+                    </div>
+                    <div class="bar-pct" style="color:var(--red);">${x.pct.toFixed(1)}%</div>
+                </div>`).join('');
+
+            // رسم بياني محسّن آخر 30 يوم
+            const trendDays = [];
+            const trendLabels = [];
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+                const dl = log[dateStr] || {};
+                let a = 0,
+                    w = 0;
+                employees.forEach(e => {
+                    if (isOffDay(e.shift, dateStr)) return;
+                    w++;
+                    if (dl[e.id] === 'absent') a++;
+                });
+                const pct = w > 0 ? (a / w) * 100 : 0;
+                trendDays.push(pct);
+                trendLabels.push(d.getDate() + '/' + (d.getMonth() + 1));
+            }
+            const maxTrend = Math.max(...trendDays, 1);
+            const barWidth = Math.max(10, 100 / 30);
+            const chartBarsHtml = trendDays.map((pct, idx) => {
+                const height = (pct / maxTrend) * 85 + 2;
+                let barClass = 'bar-low';
+                if (pct > 15) barClass = 'bar-mid';
+                if (pct > 30) barClass = 'bar-high';
+                return `<div class="chart-bar-wrapper">
+                    <div class="chart-bar ${barClass}" style="height:${height}px;">
+                        <span class="chart-bar-tooltip">${pct.toFixed(1)}%</span>
+                    </div>
+                    <div class="chart-bar-label">${trendLabels[idx]}</div>
+                </div>`;
+            }).join('');
+
+            const todayPillsHtml = employees.slice(0, 30).map(e => {
+                const isOff = isOffDay(e.shift, today);
+                const rec = dayLog[e.id];
+                let cls = 'pill-present',
+                    icon = '✓',
+                    txt = 'حاضر';
+                if (isOff) { cls = 'pill-unreg';
+                    icon = '🔄';
+                    txt = 'إجازة'; } else if (rec === 'absent') { cls = 'pill-absent';
+                    icon = '✕';
+                    txt = 'غائب'; }
+                return `<span class="today-pill ${cls}">${icon} ${esc(e.name)}</span>`;
+            }).join('');
+
+            wrap.innerHTML = `
+            <div class="dash-hero">
+                <div class="dash-kpi kpi-blue"><div class="dash-kpi-icon">👥</div><div class="dash-kpi-label">إجمالي الموظفين</div><div class="dash-kpi-val">${total}</div><div class="dash-kpi-sub">موزعين على ${SHIFT_LABEL.sabahi} و${SHIFT_LABEL.masai}</div></div>
+                <div class="dash-kpi kpi-green"><div class="dash-kpi-icon">✓</div><div class="dash-kpi-label">حاضر اليوم</div><div class="dash-kpi-val" style="color:var(--green);">${present}</div><div class="dash-kpi-sub">نسبة الحضور ${attendancePct}%</div></div>
+                <div class="dash-kpi kpi-red"><div class="dash-kpi-icon">✕</div><div class="dash-kpi-label">غائب اليوم</div><div class="dash-kpi-val" style="color:var(--red);">${absent}</div><div class="dash-kpi-sub">من ${totalWork} يوم عمل</div></div>
+                <div class="dash-kpi kpi-amber"><div class="dash-kpi-icon">📊</div><div class="dash-kpi-label">نسبة الغياب في ${MONTH_AR[m-1]}</div><div class="dash-kpi-val" style="color:var(--amber);">${monthAbsencePct}%</div><div class="dash-kpi-sub">${MONTH_AR[m-1]} ${y}</div></div>
+            </div>
+            <div class="dash-section"><div class="dash-section-title">📌 حالة اليوم (${dayName(today)})</div><div class="today-pills">${todayPillsHtml || '<span style="color:var(--text3);font-size:13px;">لا يوجد موظفين</span>'}</div></div>
+            <div class="dash-section"><div class="dash-section-title">🏆 الأعلى غياباً في ${MONTH_AR[m-1]}</div><div class="card"><div class="bar-chart">${barChartHtml}</div></div></div>
+
+            <div class="dash-section"><div class="dash-section-title">📈 اتجاه الغياب آخر 30 يوم</div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4>نسبة الغياب اليومية (%)</h4>
+                        <div class="chart-legend">
+                            <span><span class="dot-sm" style="background:var(--green);"></span> قليل</span>
+                            <span><span class="dot-sm" style="background:var(--amber);"></span> متوسط</span>
+                            <span><span class="dot-sm" style="background:var(--red);"></span> مرتفع</span>
+                        </div>
+                    </div>
+                    <div class="chart-bars">${chartBarsHtml}</div>
+                    <div class="chart-stats-row">
+                        <span>📉 أقل نسبة: <strong>${Math.min(...trendDays).toFixed(1)}%</strong></span>
+                        <span>📈 أعلى نسبة: <strong>${Math.max(...trendDays).toFixed(1)}%</strong></span>
+                        <span>📊 المتوسط: <strong>${(trendDays.reduce((a,b)=>a+b,0)/trendDays.length).toFixed(1)}%</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-section"><div class="dash-section-title">⚖️ مقارنة شهرين</div><div class="compare-grid">
+                <div class="compare-panel cmp-m2"><div class="compare-panel-hdr">${MONTH_AR[m-1]} ${y} (المختار)</div>
+                    <div class="compare-stat-row"><span class="compare-stat-label">أيام حضور</span><span class="compare-stat-val" style="color:var(--green);">${monthPresent}</span></div>
+                    <div class="compare-stat-row"><span class="compare-stat-label">أيام غياب</span><span class="compare-stat-val" style="color:var(--red);">${monthAbsent}</span></div>
+                    <div class="compare-stat-row"><span class="compare-stat-label">نسبة الغياب</span><span class="compare-stat-val" style="color:var(--amber);">${monthAbsencePct}%</span></div>
+                </div>
+                <div class="compare-panel cmp-m1"><div class="compare-panel-hdr">${MONTH_AR[(m-2+12)%12]} ${m===1?y-1:y} (السابق)</div>
+                    <div class="compare-stat-row"><span class="compare-stat-label">أيام حضور</span><span class="compare-stat-val" style="color:var(--green);">—</span></div>
+                    <div class="compare-stat-row"><span class="compare-stat-label">أيام غياب</span><span class="compare-stat-val" style="color:var(--red);">—</span></div>
+                    <div class="compare-stat-row"><span class="compare-stat-label">نسبة الغياب</span><span class="compare-stat-val" style="color:var(--amber);">—</span></div>
+                </div>
+            </div></div>
+            <div class="dash-last-update">آخر تحديث: ${new Date().toLocaleString('ar-EG')}</div>`;
+        }
+
+        document.getElementById('dash-month').addEventListener('change', renderDashboard);
+
+        // ══════════════════════════════════════════════
+        //  BACKUP / RESTORE
+        // ══════════════════════════════════════════════
+        document.getElementById('backup-btn').addEventListener('click', () => {
+            const data = { employees, log, rosterOrder, lineConfig, exportedAt: new Date().toISOString(),
+            version: 2 };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_backup_${todayStr()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast('تم تنزيل النسخة الاحتياطية 📥');
+        });
+        document.getElementById('restore-btn').addEventListener('click', () => { document.getElementById('restore-file')
+            .click(); });
+        document.getElementById('restore-file').addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data.employees)) throw new Error('صيغة ملف غير صحيحة');
+                    if (!confirm('⚠️ سيتم استبدال كل البيانات الحالية بالنسخة المستعادة. متابعة؟')) return;
+                    employees = data.employees || [];
+                    log = data.log || {};
+                    rosterOrder = data.rosterOrder || {};
+                    lineConfig = data.lineConfig || DEFAULT_LINE_CONFIG;
+                    saveEmployees(employees);
+                    saveLog(log);
+                    saveRosterOrder(rosterOrder);
+                    saveLineConfig(lineConfig);
+                    renderEmployees('');
+                    renderDashboard();
+                    renderDaily();
+                    renderMonthly();
+                    renderSummary();
+                    renderRoster();
+                    toast('تم استعادة النسخة الاحتياطية بنجاح ✓');
+                } catch (err) { alert('فشل استعادة الملف: ' + err.message); } finally { document.getElementById(
+                        'restore-file').value = ''; }
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        // ══════════════════════════════════════════════
+        //  XLSX EXPORT (مع مراعاة الإجازات)
+        // ══════════════════════════════════════════════
+        function statusArabic(rec, shift, date) {
+            if (isOffDay(shift, date)) return 'إجازة';
+            if (rec === 'absent') return 'غائب';
+            return 'حاضر';
+        }
+
+        function exportDailySheet(date) {
+            const dayLog = log[date] || {};
+            const rows = [
+                ['الاسم', 'الوردية', 'الخط', 'الفئة', 'الحالة']
+            ];
+            employees.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar')).forEach(e => { rows.push([e
+                    .name, SHIFT_LABEL[e.shift] || '', LINE_LABEL[e.line] || '', CAT_LABEL[e.cat] || '',
+                    statusArabic(dayLog[e.id], e.shift, date)
+                ]); });
+            let absent = 0,
+                off = 0;
+            employees.forEach(e => {
+                if (isOffDay(e.shift, date)) off++;
+                else if (dayLog[e.id] === 'absent') absent++;
+            });
+            const present = employees.length - off - absent;
+            rows.push([]);
+            rows.push(['الإجمالي', employees.length]);
+            rows.push(['أيام عمل', employees.length - off]);
+            rows.push(['حاضر', present]);
+            rows.push(['غائب', absent]);
+            rows.push(['إجازة', off]);
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 }];
+            return ws;
+        }
+
+        function exportMonthlySheet(monthVal) {
+            const [y, m] = monthVal.split('-').map(Number);
+            const dim = daysInMonth(y, m);
+            const header = ['الاسم'];
+            for (let d = 1; d <= dim; d++) header.push(String(d));
+            header.push('حاضر', 'غائب', 'إجازات', 'غياب%');
+            const rows = [header];
+            const todayD = new Date();
+            employees.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar')).forEach(e => {
+                const row = [e.name];
+                let present = 0,
+                    absent = 0,
+                    off = 0;
+                for (let d = 1; d <= dim; d++) {
+                    const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+                    const cellDate = new Date(y, m - 1, d);
+                    if (cellDate > todayD) { row.push(''); continue; }
+                    if (isOffDay(e.shift, dateStr)) { row.push('إجازة');
+                        off++; continue; }
+                    const rec = log[dateStr] && log[dateStr][e.id];
+                    if (rec === 'absent') { row.push('غائب');
+                        absent++; } else { row.push('حاضر');
+                        present++; }
+                }
+                const elapsed = present + absent;
+                const pct = elapsed > 0 ? ((absent / elapsed) * 100).toFixed(1) : '0.0';
+                row.push(present, absent, off, pct + '%');
+                rows.push(row);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 22 }, ...Array(dim).fill({ wch: 5 }), { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 9 }];
+            return ws;
+        }
+
+        function exportRosterSheet(date) {
+            const dayLog = log[date] || {};
+            const rows = [
+                ['الوردية', 'الخط', 'الفئة', 'الاسم', 'حالة اليوم']
+            ];
+            const shifts = ['sabahi', 'masai'];
+            shifts.forEach(shift => {
+                const activeLines = getLinesForShift(shift);
+                activeLines.forEach(l => {
+                    CATS.forEach(c => {
+                        const catEmps = getOrderedEmps(shift, l.key, c.key, employees.filter(e => e
+                            .shift === shift && e.line === l.key && e.cat === c.key));
+                        catEmps.forEach(e => { rows.push([SHIFT_LABEL[shift], l.label, c.label, e
+                                .name, statusArabic(dayLog[e.id], e.shift, date)
+                            ]); });
+                    });
+                });
+            });
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 12 }];
+            return ws;
+        }
+
+        function downloadWorkbook(wb, filename) { XLSX.writeFile(wb, filename); }
+        document.getElementById('export-daily-btn').addEventListener('click', () => {
+            const date = document.getElementById('export-daily-date').value || todayStr();
+            if (employees.length === 0) { toast('لا يوجد موظفين للتصدير'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, exportDailySheet(date), 'كشف يومي');
+            downloadWorkbook(wb, `كشف_حضور_${date}.xlsx`);
+            toast('تم تصدير كشف اليوم ✓');
+        });
+        document.getElementById('export-monthly-btn').addEventListener('click', () => {
+            const monthVal = document.getElementById('export-monthly-month').value || monthStr();
+            if (employees.length === 0) { toast('لا يوجد موظفين للتصدير'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, exportMonthlySheet(monthVal), 'تراكمي شهري');
+            downloadWorkbook(wb, `تراكمي_${monthVal}.xlsx`);
+            toast('تم تصدير التراكمي الشهري ✓');
+        });
+        document.getElementById('export-roster-btn').addEventListener('click', () => {
+            const date = document.getElementById('export-roster-date').value || todayStr();
+            if (employees.length === 0) { toast('لا يوجد موظفين للتصدير'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, exportRosterSheet(date), 'التوزيعة');
+            downloadWorkbook(wb, `توزيعة_${date}.xlsx`);
+            toast('تم تصدير التوزيعة ✓');
+        });
+        document.getElementById('export-all-btn').addEventListener('click', () => {
+            const date = document.getElementById('export-all-date').value || todayStr();
+            const monthVal = document.getElementById('export-all-month').value || monthStr();
+            if (employees.length === 0) { toast('لا يوجد موظفين للتصدير'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, exportDailySheet(date), 'كشف يومي');
+            XLSX.utils.book_append_sheet(wb, exportMonthlySheet(monthVal), 'تراكمي شهري');
+            XLSX.utils.book_append_sheet(wb, exportRosterSheet(date), 'التوزيعة');
+            downloadWorkbook(wb, `ملف_شامل_${date}.xlsx`);
+            toast('تم تصدير الملف الشامل ✓ (٣ شيتات)');
+        });
+
+        // ══════════════════════════════════════════════
+        //  INIT
+        // ══════════════════════════════════════════════
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('dash-month').value = monthStr();
+            document.getElementById('dash-month').addEventListener('change', renderDashboard);
+            renderEmployees();
+            renderDashboard();
+            const today = todayStr();
+            document.getElementById('daily-date').value = today;
+            document.getElementById('summary-date').value = today;
+            document.getElementById('roster-date').value = today;
+            document.getElementById('export-daily-date').value = today;
+            document.getElementById('export-roster-date').value = today;
+            document.getElementById('export-all-date').value = today;
+            document.getElementById('export-monthly-month').value = monthStr();
+            document.getElementById('export-all-month').value = monthStr();
+            document.getElementById('monthly-month').value = monthStr();
+            renderDaily();
+            renderSummary();
+            renderMonthly();
+            renderRoster();
+        });
+    </script>
+</body>
+</html>
