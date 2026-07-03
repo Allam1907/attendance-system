@@ -1559,6 +1559,24 @@
                 grid-template-columns: 1fr;
             }
         }
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-overlay.hidden { display: none; }
+        .loading-box {
+            color: var(--text2);
+            font-size: 15px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            padding: 18px 28px;
+            border-radius: var(--radius);
+        }
     </style>
 </head>
 <body>
@@ -1571,24 +1589,11 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
-async function testConnection() {
-    const { data, error } = await supabaseClient
-        .from("employees")
-        .select("*");
-
-    console.log(data);
-    console.log(error);
-
-    if (error) {
-        alert(error.message);
-    } else {
-        alert("تم الاتصال بـ Supabase ✅");
-    }
-}
-
-testConnection();
 </script>
 
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-box">⏳ جاري تحميل البيانات من قاعدة البيانات...</div>
+    </div>
     <div id="toast"></div>
     <!-- مودال بروفايل / تعديل -->
     <div class="modal-overlay" id="profile-modal">
@@ -1822,18 +1827,25 @@ testConnection();
             return false;
         }
 
-        function loadRosterOrder() { try { return JSON.parse(localStorage.getItem('att_roster_order') || 'null') || {}; } catch (
-                e) { return {}; } }
-
-        function saveRosterOrder(o) { localStorage.setItem('att_roster_order', JSON.stringify(o)); }
-        let rosterOrder = loadRosterOrder();
         const DEFAULT_LINE_CONFIG = { sabahi: ['l1', 'l2', 'l3', 'lx'], masai: ['l1', 'l2', 'l3', 'lx'] };
+        let rosterOrder = {};
+        let lineConfig = { ...DEFAULT_LINE_CONFIG };
 
-        function loadLineConfig() { try { return JSON.parse(localStorage.getItem('att_line_config')) ||
-                DEFAULT_LINE_CONFIG; } catch (e) { return DEFAULT_LINE_CONFIG; } }
+        async function fetchSetting(key, fallback) {
+            const { data, error } = await supabaseClient.from('app_settings').select('value').eq('key', key)
+                .maybeSingle();
+            if (error || !data) return fallback;
+            return data.value || fallback;
+        }
 
-        function saveLineConfig(cfg) { localStorage.setItem('att_line_config', JSON.stringify(cfg)); }
-        let lineConfig = loadLineConfig();
+        async function saveSetting(key, value) {
+            const { error } = await supabaseClient.from('app_settings').upsert({ key, value });
+            if (error) { console.error(error); toast('خطأ أثناء حفظ الإعدادات'); }
+        }
+
+        async function saveRosterOrder(o) { rosterOrder = o; await saveSetting('roster_order', o); }
+
+        async function saveLineConfig(cfg) { lineConfig = cfg; await saveSetting('line_config', cfg); }
 
         function getLinesForShift(shift) { const ids = lineConfig[shift] || []; return LINES.filter(l => ids.includes(l.key)); }
 
@@ -1877,29 +1889,67 @@ testConnection();
         // ══════════════════════════════════════════════
         //  STORAGE
         // ══════════════════════════════════════════════
-        function loadEmployees() { try { return JSON.parse(localStorage.getItem('att_employees') || '[]'); } catch (e) { return []; } }
+        async function fetchEmployees() {
+            const { data, error } = await supabaseClient.from('employees').select('*');
+            if (error) { console.error(error); toast('خطأ في تحميل الموظفين'); return []; }
+            return (data || []).map(e => ({ id: e.id, name: e.name, shift: e.shift || '', line: e.line || '', cat: e
+                .cat || '' }));
+        }
 
-        function saveEmployees(a) { localStorage.setItem('att_employees', JSON.stringify(a)); }
+        async function saveEmployees(a) {
+            employees = a;
+            const { error: delErr } = await supabaseClient.from('employees').delete().neq('id', '__none__');
+            if (delErr) { console.error(delErr); toast('خطأ أثناء حفظ الموظفين'); return; }
+            if (a.length) {
+                const { error } = await supabaseClient.from('employees').insert(a);
+                if (error) { console.error(error); toast('خطأ أثناء حفظ الموظفين'); }
+            }
+        }
 
-        function loadLog() { try { return JSON.parse(localStorage.getItem('att_log') || '{}'); } catch (e) { return {}; } }
+        async function fetchLog() {
+            const { data, error } = await supabaseClient.from('attendance').select('*');
+            if (error) { console.error(error); toast('خطأ في تحميل سجل الحضور'); return {}; }
+            const o = {};
+            (data || []).forEach(r => { if (!o[r.date]) o[r.date] = {};
+                o[r.date][r.emp_id] = r.status; });
+            return o;
+        }
 
-        function saveLog(o) { localStorage.setItem('att_log', JSON.stringify(o)); }
-        let employees = loadEmployees();
-        let log = loadLog();
+        async function saveLog(o) {
+            log = o;
+            const rows = [];
+            Object.keys(o).forEach(date => { Object.keys(o[date]).forEach(empId => { rows.push({ date, emp_id: empId,
+                        status: o[date][empId] }); }); });
+            const { error: delErr } = await supabaseClient.from('attendance').delete().neq('date', '__none__');
+            if (delErr) { console.error(delErr); toast('خطأ أثناء حفظ سجل الحضور'); return; }
+            if (rows.length) {
+                const { error } = await supabaseClient.from('attendance').insert(rows);
+                if (error) { console.error(error); toast('خطأ أثناء حفظ سجل الحضور'); }
+            }
+        }
+
+        async function loadAllData() {
+            [employees, log, rosterOrder, lineConfig] = await Promise.all([
+                fetchEmployees(),
+                fetchLog(),
+                fetchSetting('roster_order', {}),
+                fetchSetting('line_config', DEFAULT_LINE_CONFIG)
+            ]);
+        }
+        let employees = [];
+        let log = {};
         let modalMode = 'profile';
 
         // ══════════════════════════════════════════════
         //  TABS
         // ══════════════════════════════════════════════
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('page-' + btn.dataset.tab).classList.add('active');
-                employees = loadEmployees();
-                log = loadLog();
-                rosterOrder = loadRosterOrder();
+                await loadAllData();
                 const t = btn.dataset.tab;
                 if (t === 'dashboard') renderDashboard();
                 if (t === 'employees') renderEmployees(document.getElementById('search-emp').value);
@@ -3111,7 +3161,9 @@ testConnection();
         // ══════════════════════════════════════════════
         //  INIT
         // ══════════════════════════════════════════════
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadAllData();
+            document.getElementById('loading-overlay').classList.add('hidden');
             document.getElementById('dash-month').value = monthStr();
             document.getElementById('dash-month').addEventListener('change', renderDashboard);
             renderEmployees();
