@@ -884,12 +884,43 @@
         }
         .roster-wrap {
             display: flex;
+            flex-direction: column;
             gap: 14px;
+        }
+        .roster-lines-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            padding: 8px;
+        }
+        .confirm-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+        .confirm-banner.unconfirmed {
+            background: var(--amber-bg);
+            border: 1px solid var(--amber-b);
+            color: var(--amber);
+        }
+        .confirm-banner.confirmed {
+            background: var(--green-bg);
+            border: 1px solid var(--green-b);
+            color: var(--green);
+        }
+        .r-name-unrecorded {
+            opacity: .6;
+            border-style: dashed !important;
         }
         .roster-shift {
-            flex: 1;
-            min-width: 320px;
+            width: 100%;
+            min-width: 0;
             background: var(--bg2);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -920,10 +951,11 @@
             border-bottom: 1px solid var(--info-b);
         }
         .line-group {
-            border-bottom: 1px solid var(--border);
-        }
-        .line-group:last-child {
-            border-bottom: none;
+            flex: 1 1 0;
+            min-width: 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
         }
         .line-group-hdr {
             padding: 8px 14px;
@@ -953,7 +985,7 @@
         }
         .cat-row {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 0;
             border-bottom: 1px solid var(--border);
         }
@@ -961,9 +993,9 @@
             border-bottom: none;
         }
         .cat-col {
-            flex: 1;
-            min-width: 80px;
-            padding: 8px 8px 10px;
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 6px 4px 8px;
             border-left: 1px solid var(--border);
         }
         .cat-col:last-child {
@@ -981,8 +1013,8 @@
             letter-spacing: .4px;
         }
         .r-name {
-            font-size: 11px;
-            padding: 4px 8px;
+            font-size: 10px;
+            padding: 3px 4px;
             margin-bottom: 4px;
             border-radius: 8px;
             text-align: center;
@@ -993,6 +1025,10 @@
             user-select: none;
             transition: all .2s ease;
             position: relative;
+            overflow: visible;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.3;
         }
         .r-name:active {
             cursor: grabbing;
@@ -1962,6 +1998,8 @@ testConnection();
                     <div id="check-masai"></div>
                 </div>
             </div>
+            <h3 style="color:var(--accent);margin:20px 0 12px;">🎨 ألوان الفئات (الوظائف)</h3>
+            <div id="cat-colors-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;"></div>
             <button class="btn btn-primary" id="save-settings-btn" style="width:100%;margin-top:20px;">💾 حفظ الإعدادات</button>
         </div>
     </div>
@@ -2027,7 +2065,7 @@ testConnection();
                     onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'" />
                     <span style="font-size:12px;color:var(--text3);" id="emp-count-label"></span>
                 </div>
-                <button class="settings-btn" id="open-settings-btn">⚙️ إعدادات الورديات والخطوط</button>
+                <button class="settings-btn" id="open-settings-btn">⚙️ إعدادات الورديات والخطوط والألوان</button>
             </div>
             <div id="emp-list"></div>
         </div>
@@ -2038,10 +2076,11 @@ testConnection();
                 <input type="date" id="daily-date" />
                 <span id="daily-day-name" style="color:var(--text2);font-size:13px;"></span>
             </div>
-            <div style="margin-bottom: 0.8rem;">
+            <div style="margin-bottom: 0.8rem;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
                 <input type="text" id="search-daily" placeholder="🔍 ابحث عن موظف..."
                 style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-size:13px;width:100%;max-width:320px;outline:none;transition:border-color .2s;"
                 onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'" />
+                <button class="settings-btn" id="open-settings-btn-daily">⚙️ إعدادات الورديات والخطوط والألوان</button>
             </div>
             <div id="daily-list"></div>
         </div>
@@ -2057,9 +2096,9 @@ testConnection();
                 onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'" />
             </div>
             <div class="legend">
-                <span><span class="dot" style="background:var(--green)"></span>حاضر (افتراضي)</span>
+                <span><span class="dot" style="background:var(--green)"></span>حاضر</span>
                 <span><span class="dot" style="background:var(--red)"></span>غائب</span>
-                <span><span class="dot" style="background:var(--text3)"></span>أيام مستقبلية</span>
+                <span><span class="dot" style="background:var(--text3)"></span>؟ لم يُسجَّل الحضور لهذا اليوم</span>
                 <span><span class="dot" style="background:var(--bg3)"></span>إجازة (الخميس مسائي / الجمعة صباحي)</span>
             </div>
             <div class="monthly-wrap">
@@ -2163,6 +2202,61 @@ testConnection();
         const LINE_LABEL = Object.fromEntries(LINES.map(l => [l.key, l.label]));
         const CAT_LABEL = Object.fromEntries(CATS.map(c => [c.key, c.label]));
         const SHIFT_LABEL = { sabahi: 'صباحي', masai: 'مسائي' };
+
+        // الفئات المستبعدة من الخط الأول/الثاني/الثالث (تظهر فقط خارج الخطوط)
+        const LINE_EXCLUDED_CATS = ['loader', 'fixed', 'mosta3deen'];
+        // الفئات المستبعدة من "خارج الخطوط"
+        const LX_EXCLUDED_CATS = ['mosta3deen', 'moshaghel'];
+        function catsForLine(lineKey) {
+            if (lineKey === 'l1' || lineKey === 'l2' || lineKey === 'l3') {
+                return CATS.filter(c => !LINE_EXCLUDED_CATS.includes(c.key));
+            }
+            if (lineKey === 'lx') {
+                return CATS.filter(c => !LX_EXCLUDED_CATS.includes(c.key));
+            }
+            return CATS;
+        }
+
+        // ══════════════════════════════════════════════
+        //  ألوان الفئات (قابلة للتخصيص من المستخدم)
+        // ══════════════════════════════════════════════
+        const DEFAULT_CAT_COLORS = {
+            moshrif: '#fbbf24', moshaghel: '#60a5fa', amal: '#34d399', sayek: '#f87171',
+            fixed: '#c084fc', loader: '#fb923c', mosta3deen: '#94a3b8'
+        };
+        function loadCatColors() { try { return Object.assign({}, DEFAULT_CAT_COLORS, JSON.parse(localStorage.getItem('att_cat_colors') || '{}')); } catch (e) { return Object.assign({}, DEFAULT_CAT_COLORS); } }
+        function saveCatColors(o) { localStorage.setItem('att_cat_colors', JSON.stringify(o)); }
+        let catColors = loadCatColors();
+        function hexToRgba(hex, alpha) {
+            const h = (hex || '#888888').replace('#', '');
+            const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+            const r = parseInt(full.substr(0, 2), 16) || 0;
+            const g = parseInt(full.substr(2, 2), 16) || 0;
+            const b = parseInt(full.substr(4, 2), 16) || 0;
+            return `rgba(${r},${g},${b},${alpha})`;
+        }
+        function catColorStyle(catKey) {
+            const c = catColors[catKey] || '#888888';
+            return `background:${hexToRgba(c,.16)};border-color:${hexToRgba(c,.55)};color:${c};`;
+        }
+
+        // ══════════════════════════════════════════════
+        //  تأكيد تسجيل الحضور اليومي (منع الافتراض التلقائي)
+        // ══════════════════════════════════════════════
+        function loadConfirmedDates() { try { return JSON.parse(localStorage.getItem('att_confirmed_dates') || '{}'); } catch (e) { return {}; } }
+        function saveConfirmedDates(o) { localStorage.setItem('att_confirmed_dates', JSON.stringify(o)); }
+        let confirmedDates = loadConfirmedDates();
+        function isDayConfirmed(dateStr) { return !!confirmedDates[dateStr]; }
+        function confirmDay(dateStr) { confirmedDates[dateStr] = true; saveConfirmedDates(confirmedDates); }
+
+        // حالة موظف في يوم معيّن: off (إجازة) / unrecorded (لم يسجل الحضور) / absent (غائب) / present (حاضر)
+        function getEmpStatus(emp, dateStr) {
+            if (!emp) return 'unrecorded';
+            if (isOffDay(emp.shift, dateStr)) return 'off';
+            if (!isDayConfirmed(dateStr)) return 'unrecorded';
+            const dayLog = log[dateStr] || {};
+            return dayLog[emp.id] === 'absent' ? 'absent' : 'present';
+        }
 
         // إجازات: الخميس إجازة للمسائي، الجمعة إجازة للصباحي
         function isOffDay(shift, dateStr) {
@@ -2290,11 +2384,24 @@ testConnection();
               <input type="checkbox" value="${l.key}" ${lineConfig.masai.includes(l.key)?'checked':''}>
               ${l.label}
             </label>`).join('');
+            const colorsGrid = document.getElementById('cat-colors-grid');
+            colorsGrid.innerHTML = CATS.map(c => `
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg3);border-radius:8px;">
+              <input type="color" data-catcolor="${c.key}" value="${catColors[c.key] || '#888888'}" style="width:30px;height:30px;border:none;background:none;cursor:pointer;">
+              <span style="font-size:12px;">${c.label}</span>
+            </label>`).join('');
         }
         document.getElementById('open-settings-btn').addEventListener('click', () => {
             buildSettingsCheckboxes();
             document.getElementById('settings-modal').classList.add('open');
         });
+        const openSettingsBtnDaily = document.getElementById('open-settings-btn-daily');
+        if (openSettingsBtnDaily) {
+            openSettingsBtnDaily.addEventListener('click', () => {
+                buildSettingsCheckboxes();
+                document.getElementById('settings-modal').classList.add('open');
+            });
+        }
         document.getElementById('settings-modal-close').addEventListener('click', () => {
             document.getElementById('settings-modal').classList.remove('open');
         });
@@ -2308,10 +2415,15 @@ testConnection();
             lineConfig.sabahi = Array.from(sabahiChecks).map(cb => cb.value);
             lineConfig.masai = Array.from(masaiChecks).map(cb => cb.value);
             saveLineConfig(lineConfig);
+            document.querySelectorAll('#cat-colors-grid input[data-catcolor]').forEach(inp => {
+                catColors[inp.dataset.catcolor] = inp.value;
+            });
+            saveCatColors(catColors);
             document.getElementById('settings-modal').classList.remove('open');
             renderEmployees(document.getElementById('search-emp').value);
+            renderDaily();
             renderRoster();
-            toast('تم حفظ إعدادات الخطوط والورديات ✅');
+            toast('تم حفظ إعدادات الخطوط والورديات والألوان ✅');
         });
         document.getElementById('emp-shift').addEventListener('change', function() {
             const shift = this.value;
@@ -2549,6 +2661,110 @@ testConnection();
         // ══════════════════════════════════════════════
         //  EMPLOYEES
         // ══════════════════════════════════════════════
+        // ══════════════════════════════════════════════
+        //  بناء صفوف الخطوط أفقياً (مستخدم في: الموظفين / التسجيل اليومي / القوام الأساسي)
+        // ══════════════════════════════════════════════
+        function nameItemHtml(mode, e, shift, lineKey, catKey, date) {
+            const colorStyle = catColorStyle(catKey);
+            if (mode === 'roster') {
+                const status = date ? getEmpStatus(e, date) : 'present';
+                const dimCls = (status === 'absent' || status === 'off') ? 'r-name-absent' : (status ===
+                    'unrecorded' ? 'r-name-unrecorded' : '');
+                return `<div class="r-name ${dimCls}" style="${colorStyle}" title="${esc(e.name)}" draggable="true" data-id="${e.id}" data-shift="${shift}" data-line="${lineKey}" data-cat="${catKey}">${esc(e.name)}</div>`;
+            }
+            if (mode === 'employees') {
+                return `<div class="r-name" style="${colorStyle};cursor:default;display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;" title="${esc(e.name)}">
+                    <span data-profile="${e.id}" style="cursor:pointer;flex:1;text-align:right;word-break:break-word;">${esc(e.name)}</span>
+                    <span style="display:inline-flex;gap:3px;flex-shrink:0;">
+                        <span data-edit="${e.id}" style="cursor:pointer;" title="تعديل">✏️</span>
+                        <span data-delete="${e.id}" style="cursor:pointer;" title="حذف">🗑</span>
+                    </span>
+                </div>`;
+            }
+            // daily
+            const status = getEmpStatus(e, date);
+            const isAbsent = status === 'absent';
+            const isOff = status === 'off';
+            const isUnrec = status === 'unrecorded';
+            let dimCls = isAbsent ? 'r-name-absent' : (isUnrec ? 'r-name-unrecorded' : '');
+            let actionHtml = '';
+            if (isOff) { actionHtml = ''; } else if (isAbsent) {
+                actionHtml = `<span data-clear="${e.id}" title="إلغاء الغياب" style="cursor:pointer;margin-right:4px;">↺</span>`;
+            } else {
+                actionHtml = `<span data-absent="${e.id}" title="تسجيل غياب" style="cursor:pointer;margin-right:4px;">✕</span>`;
+            }
+            return `<div class="r-name ${dimCls}" style="${colorStyle};cursor:default;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;" title="${esc(e.name)}">
+                <span style="word-break:break-word;">${esc(e.name)}</span>${actionHtml}
+            </div>`;
+        }
+
+        function buildLinesRowHTML(shift, shiftEmps, date, mode) {
+            const activeLines = getLinesForShift(shift);
+            if (activeLines.length === 0) {
+                return `<div class="empty-line-msg">لا توجد خطوط مفعّلة لهذه الوردية. فعّل الخطوط من إعدادات الموظفين.</div>`;
+            }
+            let html = `<div class="roster-lines-row">`;
+            activeLines.forEach(l => {
+                const lineEmps = shiftEmps.filter(e => e.line === l.key);
+                const cats = catsForLine(l.key);
+                html += `<div class="line-group ${buildLineCls(l.key)}">
+                    <div class="line-group-hdr">
+                        <span>${l.label} <span style="opacity:.7;font-weight:400;">(${lineEmps.length})</span></span>
+                        ${mode==='daily' ? `<button class="btn-mass-absent" style="margin-right:auto;" onclick="markAllAbsent('${shift}','${l.key}','${date}')">✕ تغييب الكل</button>` : ''}
+                    </div>
+                    <div class="cat-row">`;
+                cats.forEach(c => {
+                    const catEmpsRaw = lineEmps.filter(e => e.cat === c.key);
+                    const catEmps = mode === 'roster' ? getOrderedEmps(shift, l.key, c.key, catEmpsRaw) : catEmpsRaw;
+                    html += `<div class="cat-col" data-shift="${shift}" data-line="${l.key}" data-cat="${c.key}">
+                        <div class="cat-title">${c.label}</div>
+                        <div class="cat-col-body" data-shift="${shift}" data-line="${l.key}" data-cat="${c.key}">`;
+                    if (catEmps.length === 0) {
+                        html += `<div class="r-empty">—</div>`;
+                    } else {
+                        catEmps.forEach(e => { html += nameItemHtml(mode, e, shift, l.key, c.key, date); });
+                    }
+                    html += `</div></div>`;
+                });
+                html += `</div></div>`;
+            });
+            html += `</div>`;
+            return html;
+        }
+
+        function attachBoardEvents(wrap, mode) {
+            if (mode === 'employees') {
+                wrap.querySelectorAll('[data-profile]').forEach(el => el.addEventListener('click', () => openProfile(
+                    el.dataset.profile)));
+                wrap.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => editEmployee(el
+                    .dataset.edit)));
+                wrap.querySelectorAll('[data-delete]').forEach(el => el.addEventListener('click', () => {
+                    const emp = employees.find(x => x.id === el.dataset.delete);
+                    if (!emp) return;
+                    if (confirm(`متأكد من حذف "${emp.name}"؟`)) {
+                        employees = employees.filter(x => x.id !== emp.id);
+                        saveEmployees(employees);
+                        Object.keys(log).forEach(d => { if (log[d] && log[d][emp.id] !== undefined) delete log[
+                                d][emp.id]; });
+                        saveLog(log);
+                        renderEmployees(document.getElementById('search-emp').value);
+                        toast('تم حذف الموظف 🗑');
+                    }
+                }));
+            }
+            if (mode === 'daily') {
+                const date = document.getElementById('daily-date').value || todayStr();
+                wrap.querySelectorAll('[data-absent]').forEach(el => el.addEventListener('click', () => {
+                    setAttendance(el.dataset.absent, date, 'absent');
+                    renderDaily();
+                }));
+                wrap.querySelectorAll('[data-clear]').forEach(el => el.addEventListener('click', () => {
+                    setAttendance(el.dataset.clear, date, null);
+                    renderDaily();
+                }));
+            }
+        }
+
         function renderEmployees(filter = '') {
             const wrap = document.getElementById('emp-list');
             const q = (filter || '').trim().toLowerCase();
@@ -2568,30 +2784,18 @@ testConnection();
             shifts.forEach(shift => {
                 const shiftEmps = list.filter(e => e.shift === shift);
                 if (shiftEmps.length === 0) return;
-                html +=
-                    `<div style="font-size:14px;font-weight:700;margin:1.25rem 0 .75rem;color:var(--text2);">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'}</div>`;
                 const activeLines = getLinesForShift(shift);
                 const lineKeys = activeLines.map(l => l.key);
-                html += `<div class="lines-horizontal-grid">`;
-                lineKeys.forEach(lk => {
-                    const lineEmps = shiftEmps.filter(e => e.line === lk);
-                    const lcCls = { l1: 'lc-l1', l2: 'lc-l2', l3: 'lc-l3', lx: 'lc-lx' } [lk] || '';
-                    html += `<div class="line-card ${lcCls}">
-                        <div class="line-card-header">${LINE_LABEL[lk]} <span class="emp-line-count">(${lineEmps.length})</span></div>
-                        <div class="line-card-body">`;
-                    if (lineEmps.length === 0) {
-                        html += `<div class="empty-line-msg">لا يوجد موظفين</div>`;
-                    } else {
-                        html += lineEmps.map(e => empRowHtml(e)).join('');
-                    }
-                    html += `</div></div>`;
-                });
+                html += `<div class="roster-shift ${shift==='sabahi'?'shift-sabahi':'shift-masai'}" style="margin-bottom:16px;">
+                    <div class="roster-shift-hdr">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'} (${shiftEmps.length})</div>`;
+                html += buildLinesRowHTML(shift, shiftEmps, null, 'employees');
                 const others = shiftEmps.filter(e => !lineKeys.includes(e.line));
                 if (others.length > 0) {
-                    html += `<div class="line-card lc-none">
+                    html += `<div style="padding:10px;">
+                        <div class="line-card lc-none">
                         <div class="line-card-header">بدون خط محدد <span class="emp-line-count">(${others.length})</span></div>
                         <div class="line-card-body">${others.map(e => empRowHtml(e)).join('')}</div>
-                    </div>`;
+                    </div></div>`;
                 }
                 html += `</div>`;
             });
@@ -2602,28 +2806,7 @@ testConnection();
                 html += `<div class="lines-horizontal-grid"><div class="line-card lc-none"><div class="line-card-header">بدون وردية <span class="emp-line-count">(${noShift.length})</span></div><div class="line-card-body">${noShift.map(e => empRowHtml(e)).join('')}</div></div></div>`;
             }
             wrap.innerHTML = html;
-            wrap.querySelectorAll('[data-profile]').forEach(btn => {
-                btn.addEventListener('click', () => openProfile(btn.dataset.profile));
-            });
-            wrap.querySelectorAll('[data-edit]').forEach(btn => {
-                btn.addEventListener('click', () => editEmployee(btn.dataset.edit));
-            });
-            wrap.querySelectorAll('[data-delete]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const emp = employees.find(x => x.id === btn.dataset.delete);
-                    if (!emp) return;
-                    if (confirm(`متأكد من حذف "${emp.name}"؟`)) {
-                        employees = employees.filter(e => e.id !== emp.id);
-                        saveEmployees(employees);
-                        Object.keys(log).forEach(d => { if (log[d] && log[d][emp.id] !== undefined) delete log[d][
-                                emp.id
-                            ]; });
-                        saveLog(log);
-                        renderEmployees(document.getElementById('search-emp').value);
-                        toast('تم حذف الموظف 🗑');
-                    }
-                });
-            });
+            attachBoardEvents(wrap, 'employees');
         }
 
         function empRowHtml(e) {
@@ -2682,6 +2865,7 @@ testConnection();
             if (!log[date]) log[date] = {};
             if (status === null) { delete log[date][empId]; } else { log[date][empId] = status; }
             saveLog(log);
+            confirmDay(date);
         }
 
         function renderDaily() {
@@ -2700,38 +2884,32 @@ testConnection();
                 wrap.innerHTML = `<div class="empty">لا توجد نتائج مطابقة للبحث 🔍</div>`;
                 return;
             }
-            const dayLog = log[date] || {};
             const shifts = ['sabahi', 'masai'];
             let html = '';
+            const confirmed = isDayConfirmed(date);
+            html += confirmed ?
+                `<div class="confirm-banner confirmed">
+                    <span>✅ تم تسجيل حضور هذا اليوم</span>
+                    <span style="cursor:pointer;text-decoration:underline;" onclick="unconfirmDay('${date}')">↺ إلغاء التأكيد</span>
+                </div>` :
+                `<div class="confirm-banner unconfirmed">
+                    <span>⚠️ لم يتم تسجيل الحضور لهذا اليوم بعد — لن يُحتسب أي أحد حاضراً أو غائباً حتى تسجّل</span>
+                    <span style="cursor:pointer;text-decoration:underline;font-weight:700;" onclick="confirmDayAllPresent('${date}')">✔ تأكيد — الكل حاضر</span>
+                </div>`;
             shifts.forEach(shift => {
                 const shiftEmps = list.filter(e => e.shift === shift);
                 if (shiftEmps.length === 0) return;
                 const activeLines = getLinesForShift(shift);
-                html +=
-                    `<div class="daily-group-header">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'}</div>`;
-                html += `<div class="lines-horizontal-grid">`;
-                activeLines.forEach(l => {
-                    const lineEmps = shiftEmps.filter(e => e.line === l.key);
-                    const lcCls = { l1: 'lc-l1', l2: 'lc-l2', l3: 'lc-l3', lx: 'lc-lx' } [l.key] || '';
-                    html += `<div class="line-card ${lcCls}">
-                        <div class="line-card-header" style="display:flex;justify-content:space-between;align-items:center;">
-                            <span>${l.label} <span style="opacity:.7;font-weight:400;font-size:10px;">(${lineEmps.length})</span></span>
-                            <button class="btn-mass-absent" onclick="markAllAbsent('${shift}','${l.key}','${date}')">✕ تغييب الكل</button>
-                        </div>
-                        <div class="line-card-body">`;
-                    if (lineEmps.length === 0) {
-                        html += `<div class="empty-line-msg">لا يوجد موظفين</div>`;
-                    } else {
-                        lineEmps.forEach(e => { html += dailyRowHtml(e, dayLog[e.id], date); });
-                    }
-                    html += `</div></div>`;
-                });
+                html += `<div class="roster-shift ${shift==='sabahi'?'shift-sabahi':'shift-masai'}" style="margin-bottom:16px;">
+                    <div class="roster-shift-hdr">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'}</div>`;
+                html += buildLinesRowHTML(shift, shiftEmps, date, 'daily');
                 const others = shiftEmps.filter(e => !activeLines.map(l => l.key).includes(e.line));
                 if (others.length > 0) {
-                    html += `<div class="line-card lc-none">
+                    html += `<div style="padding:10px;">
+                        <div class="line-card lc-none">
                         <div class="line-card-header">بدون خط محدد <span style="opacity:.7;font-weight:400;font-size:10px;">(${others.length})</span></div>
-                        <div class="line-card-body">${others.map(e => dailyRowHtml(e, dayLog[e.id], date)).join('')}</div>
-                    </div>`;
+                        <div class="line-card-body">${others.map(e => dailyRowHtml(e, date)).join('')}</div>
+                    </div></div>`;
                 }
                 html += `</div>`;
             });
@@ -2739,31 +2917,23 @@ testConnection();
             if (noShift.length > 0) {
                 html += `<div class="daily-group-header">⚪ بدون وردية</div>`;
                 html +=
-                    `<div class="lines-horizontal-grid"><div class="line-card lc-none"><div class="line-card-body">${noShift.map(e => dailyRowHtml(e, dayLog[e.id], date)).join('')}</div></div></div>`;
+                    `<div class="lines-horizontal-grid"><div class="line-card lc-none"><div class="line-card-body">${noShift.map(e => dailyRowHtml(e, date)).join('')}</div></div></div>`;
             }
             wrap.innerHTML = html;
-            wrap.querySelectorAll('[data-absent]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    setAttendance(btn.dataset.absent, date, 'absent');
-                    renderDaily();
-                });
-            });
-            wrap.querySelectorAll('[data-clear]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    setAttendance(btn.dataset.clear, date, null);
-                    renderDaily();
-                });
-            });
+            attachBoardEvents(wrap, 'daily');
         }
 
-        function dailyRowHtml(e, status, date) {
+        function dailyRowHtml(e, date) {
+            const status = getEmpStatus(e, date);
             const isAbsent = status === 'absent';
-            const isOff = isOffDay(e.shift, date);
+            const isOff = status === 'off';
+            const isUnrec = status === 'unrecorded';
             let statusText = '✓ حاضر',
                 statusColor = 'var(--green)';
             if (isOff) { statusText = '🔄 إجازة';
                 statusColor = 'var(--text3)'; } else if (isAbsent) { statusText = '✕ غائب';
-                statusColor = 'var(--red)'; }
+                statusColor = 'var(--red)'; } else if (isUnrec) { statusText = '⏳ لم يسجل';
+                statusColor = 'var(--text3)'; }
             return `<div class="daily-row">
                 <div style="flex:1;">
                     <p class="emp-name" style="${isAbsent?'text-decoration:line-through;opacity:.6;':''}">${esc(e.name)}</p>
@@ -2785,8 +2955,20 @@ testConnection();
             if (!log[date]) log[date] = {};
             targets.forEach(e => { log[date][e.id] = 'absent'; });
             saveLog(log);
+            confirmDay(date);
             renderDaily();
             toast(`تم تسجيل غياب ${targets.length} موظف ✕`);
+        };
+        window.confirmDayAllPresent = function(date) {
+            confirmDay(date);
+            renderDaily();
+            toast('تم تأكيد الحضور: الكل حاضر ✓');
+        };
+        window.unconfirmDay = function(date) {
+            delete confirmedDates[date];
+            saveConfirmedDates(confirmedDates);
+            renderDaily();
+            toast('تم إلغاء تأكيد اليوم، سيظهر كـ "لم يسجل" الآن');
         };
 
         // ══════════════════════════════════════════════
@@ -2824,17 +3006,16 @@ testConnection();
                 for (let d = 1; d <= dim; d++) {
                     const dateStr = `${y}-${pad(m)}-${pad(d)}`;
                     const cellDate = new Date(y, m - 1, d);
-                    const isOff = isOffDay(e.shift, dateStr);
-                    const rec = log[dateStr] && log[dateStr][e.id];
-                    if (isOff) {
-                        cellsHtml += `<td class="cell-offday">—</td>`;
-                        continue;
-                    }
                     if (cellDate > todayD) {
                         cellsHtml += `<td class="cell-empty"></td>`;
                         continue;
                     }
-                    if (rec === 'absent') { cellsHtml += `<td class="cell-absent">✕</td>`;
+                    const status = getEmpStatus(e, dateStr);
+                    if (status === 'off') { cellsHtml += `<td class="cell-offday">—</td>`;
+                        continue; }
+                    if (status === 'unrecorded') { cellsHtml += `<td class="cell-empty" title="لم يسجل">؟</td>`;
+                        continue; }
+                    if (status === 'absent') { cellsHtml += `<td class="cell-absent">✕</td>`;
                         absent++; } else { cellsHtml += `<td class="cell-present">✓</td>`;
                         present++; }
                 }
@@ -2862,21 +3043,28 @@ testConnection();
         function renderSummary() {
             const date = document.getElementById('summary-date').value || todayStr();
             document.getElementById('summary-day-name').textContent = dayName(date);
-            const dayLog = log[date] || {};
+            const confirmed = isDayConfirmed(date);
             let absent = 0,
-                offCount = 0;
+                offCount = 0,
+                unrecCount = 0;
             employees.forEach(e => {
-                if (isOffDay(e.shift, date)) { offCount++; return; }
-                if (dayLog[e.id] === 'absent') absent++;
+                const status = getEmpStatus(e, date);
+                if (status === 'off') offCount++;
+                else if (status === 'absent') absent++;
+                else if (status === 'unrecorded') unrecCount++;
             });
             const total = employees.length - offCount;
-            const present = total - absent;
+            const present = total - absent - unrecCount;
             const pct = total > 0 ? ((absent / total) * 100).toFixed(1) : '0.0';
 
             // بطاقات إحصائية مبسطة
-            document.getElementById('summary-metrics').innerHTML = `
+            document.getElementById('summary-metrics').innerHTML = (confirmed ? '' : `
+                <div class="confirm-banner unconfirmed" style="grid-column:1/-1;">
+                    <span>⚠️ لم يتم تسجيل الحضور لهذا اليوم بعد — الأرقام أدناه لا تعتبر أي أحد حاضراً أو غائباً</span>
+                </div>`) + `
                 <div class="metric-card"><div class="metric-label">✅ حاضر</div><div class="metric-value" style="color:var(--green);">${present}</div></div>
                 <div class="metric-card"><div class="metric-label">❌ غائب</div><div class="metric-value" style="color:var(--red);">${absent}</div></div>
+                <div class="metric-card"><div class="metric-label">⏳ لم يسجل</div><div class="metric-value" style="color:var(--text3);">${unrecCount}</div></div>
                 <div class="metric-card"><div class="metric-label">📊 نسبة الغياب</div><div class="metric-value" style="color:var(--amber);">${pct}%</div></div>
             `;
 
@@ -2886,10 +3074,11 @@ testConnection();
                 table.innerHTML = `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">لا يوجد موظفين بعد</td></tr>`;
                 return;
             }
-            const absentEmployees = employees.filter(e => {
-                if (isOffDay(e.shift, date)) return false;
-                return dayLog[e.id] === 'absent';
-            });
+            const absentEmployees = employees.filter(e => getEmpStatus(e, date) === 'absent');
+            if (!confirmed) {
+                table.innerHTML = `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">⏳ لم يتم تسجيل الحضور لهذا اليوم بعد</td></tr>`;
+                return;
+            }
             if (absentEmployees.length === 0) {
                 table.innerHTML = `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">🎉 لا يوجد غياب اليوم</td></tr>`;
                 return;
@@ -2940,7 +3129,6 @@ testConnection();
             const date = document.getElementById('roster-date').value || todayStr();
             document.getElementById('roster-day').textContent = dayName(date);
             const wrap = document.getElementById('roster-content');
-            const dayLog = log[date] || {};
             if (employees.length === 0) {
                 wrap.innerHTML =
                     `<div class="empty">لا يوجد موظفين بعد. أضف موظفين من تبويب "الموظفين" أولاً.</div>`;
@@ -2950,52 +3138,26 @@ testConnection();
                 { key: 'sabahi', label: '☀️ صباحي', cls: 'shift-sabahi' },
                 { key: 'masai', label: '🌙 مسائي', cls: 'shift-masai' },
             ];
+            const confirmed = isDayConfirmed(date);
             let html = `<div class="roster-wrap">`;
+            html += confirmed ?
+                `<div class="confirm-banner confirmed">
+                    <span>✅ تم تسجيل حضور هذا اليوم</span>
+                    <span style="cursor:pointer;text-decoration:underline;" onclick="unconfirmDay('${date}');renderRoster();">↺ إلغاء التأكيد</span>
+                </div>` :
+                `<div class="confirm-banner unconfirmed">
+                    <span>⚠️ لم يتم تسجيل الحضور لهذا اليوم بعد — لن يُحتسب أي أحد حاضراً أو غائباً حتى تسجّل من "تسجيل يومي"</span>
+                </div>`;
             shifts.forEach(shift => {
                 let shiftEmps = employees.filter(e => e.shift === shift.key);
-                if (rosterMode === 'present') { shiftEmps = shiftEmps.filter(e => dayLog[e.id] !== 'absent' && !isOffDay(
-                        shift.key, date)); }
-                const activeLines = getLinesForShift(shift.key);
+                if (rosterMode === 'present') { shiftEmps = shiftEmps.filter(e => getEmpStatus(e, date) !== 'absent'); }
                 let totalCount = shiftEmps.length;
-                let absentCount = shiftEmps.filter(e => dayLog[e.id] === 'absent' && !isOffDay(shift.key, date))
-                    .length;
-                let presentCount = totalCount - absentCount;
+                let absentCount = shiftEmps.filter(e => getEmpStatus(e, date) === 'absent').length;
+                let unrecCount = shiftEmps.filter(e => getEmpStatus(e, date) === 'unrecorded').length;
+                let presentCount = totalCount - absentCount - unrecCount;
                 html += `<div class="roster-shift ${shift.cls}">
                     <div class="roster-shift-hdr">${shift.label} (${totalCount})</div>`;
-                if (activeLines.length === 0) {
-                    html +=
-                        `<div class="empty-line-msg">لا توجد خطوط مفعّلة لهذه الوردية. فعّل الخطوط من إعدادات الموظفين.</div>`;
-                } else {
-                    activeLines.forEach(l => {
-                        const lineEmps = shiftEmps.filter(e => e.line === l.key);
-                        html +=
-                            `<div class="line-group ${buildLineCls(l.key)}">
-                            <div class="line-group-hdr">${l.label} <span style="opacity:.7;font-weight:400;">(${lineEmps.length})</span></div>
-                            <div class="cat-row">`;
-                        CATS.forEach(c => {
-                            const catEmps = getOrderedEmps(shift.key, l.key, c.key, lineEmps.filter(
-                                e => e.cat === c.key));
-                            html +=
-                                `<div class="cat-col" data-shift="${shift.key}" data-line="${l.key}" data-cat="${c.key}">
-                                <div class="cat-title">${c.label}</div>
-                                <div class="cat-col-body" data-shift="${shift.key}" data-line="${l.key}" data-cat="${c.key}">`;
-                            if (catEmps.length === 0) { html +=
-                                    `<div class="r-empty">—</div>`; } else {
-                                catEmps.forEach(e => {
-                                    const isAbsent = dayLog[e.id] === 'absent' && !isOffDay(shift
-                                        .key, date);
-                                    const isOff = isOffDay(shift.key, date);
-                                    const absentCls = isAbsent ? 'r-name-absent' : '';
-                                    const offCls = isOff ? 'r-name-absent' : '';
-                                    html +=
-                                        `<div class="r-name ${absentCls} ${offCls}" draggable="true" data-id="${e.id}" data-shift="${shift.key}" data-line="${l.key}" data-cat="${c.key}">${esc(e.name)}</div>`;
-                                });
-                            }
-                            html += `</div></div>`;
-                        });
-                        html += `</div></div>`;
-                    });
-                }
+                html += buildLinesRowHTML(shift.key, shiftEmps, date, 'roster');
                 html += `<div class="roster-stats-bar">
                     <div class="rstat"><div class="rs-label">الإجمالي</div><div class="rs-val">${totalCount}</div></div>
                     <div class="rstat"><div class="rs-label">حاضر</div><div class="rs-val" style="color:var(--green);">${presentCount}</div></div>
@@ -3130,16 +3292,19 @@ testConnection();
                 return;
             }
             const today = todayStr();
-            const dayLog = log[today] || {};
+            const todayConfirmed = isDayConfirmed(today);
             let absent = 0,
-                offCount = 0;
+                offCount = 0,
+                unrecTodayCount = 0;
             employees.forEach(e => {
-                if (isOffDay(e.shift, today)) { offCount++; return; }
-                if (dayLog[e.id] === 'absent') absent++;
+                const status = getEmpStatus(e, today);
+                if (status === 'off') offCount++;
+                else if (status === 'absent') absent++;
+                else if (status === 'unrecorded') unrecTodayCount++;
             });
             const total = employees.length;
             const totalWork = total - offCount;
-            const present = totalWork - absent;
+            const present = totalWork - absent - unrecTodayCount;
             const attendancePct = totalWork > 0 ? ((present / totalWork) * 100).toFixed(1) : '0.0';
 
             const dashMonthVal = document.getElementById('dash-month').value || monthStr();
@@ -3153,12 +3318,11 @@ testConnection();
             for (let d = 1; d <= dim; d++) {
                 const dateStr = `${y}-${pad(m)}-${pad(d)}`;
                 if (new Date(dateStr + 'T12:00:00') > now) continue;
-                const dl = log[dateStr] || {};
                 employees.forEach(e => {
-                    if (isOffDay(e.shift, dateStr)) return;
+                    const status = getEmpStatus(e, dateStr);
+                    if (status === 'off' || status === 'unrecorded') return;
                     monthWorkDays++;
-                    const rec = dl[e.id];
-                    if (rec === 'absent') { monthAbsent++;
+                    if (status === 'absent') { monthAbsent++;
                         empAbsenceMap[e.id].absent++; } else { empAbsenceMap[e.id].present++; }
                 });
             }
@@ -3193,13 +3357,13 @@ testConnection();
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 const dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-                const dl = log[dateStr] || {};
                 let a = 0,
                     w = 0;
                 employees.forEach(e => {
-                    if (isOffDay(e.shift, dateStr)) return;
+                    const status = getEmpStatus(e, dateStr);
+                    if (status === 'off' || status === 'unrecorded') return;
                     w++;
-                    if (dl[e.id] === 'absent') a++;
+                    if (status === 'absent') a++;
                 });
                 const pct = w > 0 ? (a / w) * 100 : 0;
                 trendDays.push(pct);
@@ -3221,20 +3385,20 @@ testConnection();
             }).join('');
 
             const todayPillsHtml = employees.slice(0, 30).map(e => {
-                const isOff = isOffDay(e.shift, today);
-                const rec = dayLog[e.id];
+                const status = getEmpStatus(e, today);
                 let cls = 'pill-present',
-                    icon = '✓',
-                    txt = 'حاضر';
-                if (isOff) { cls = 'pill-unreg';
-                    icon = '🔄';
-                    txt = 'إجازة'; } else if (rec === 'absent') { cls = 'pill-absent';
-                    icon = '✕';
-                    txt = 'غائب'; }
+                    icon = '✓';
+                if (status === 'off') { cls = 'pill-unreg';
+                    icon = '🔄'; } else if (status === 'absent') { cls = 'pill-absent';
+                    icon = '✕'; } else if (status === 'unrecorded') { cls = 'pill-unreg';
+                    icon = '⏳'; }
                 return `<span class="today-pill ${cls}">${icon} ${esc(e.name)}</span>`;
             }).join('');
 
             wrap.innerHTML = `
+            ${todayConfirmed ? '' : `<div class="confirm-banner unconfirmed">
+                <span>⚠️ لم يتم تسجيل حضور اليوم بعد — سجّله من تبويب "تسجيل يومي"</span>
+            </div>`}
             <div class="dash-hero">
                 <div class="dash-kpi kpi-blue"><div class="dash-kpi-icon">👥</div><div class="dash-kpi-label">إجمالي الموظفين</div><div class="dash-kpi-val">${total}</div><div class="dash-kpi-sub">موزعين على ${SHIFT_LABEL.sabahi} و${SHIFT_LABEL.masai}</div></div>
                 <div class="dash-kpi kpi-green"><div class="dash-kpi-icon">✓</div><div class="dash-kpi-label">حاضر اليوم</div><div class="dash-kpi-val" style="color:var(--green);">${present}</div><div class="dash-kpi-sub">نسبة الحضور ${attendancePct}%</div></div>
@@ -3332,33 +3496,37 @@ testConnection();
         // ══════════════════════════════════════════════
         //  XLSX EXPORT (مع مراعاة الإجازات)
         // ══════════════════════════════════════════════
-        function statusArabic(rec, shift, date) {
-            if (isOffDay(shift, date)) return 'إجازة';
-            if (rec === 'absent') return 'غائب';
+        function statusArabic(status) {
+            if (status === 'off') return 'إجازة';
+            if (status === 'absent') return 'غائب';
+            if (status === 'unrecorded') return 'لم يسجل';
             return 'حاضر';
         }
 
         function exportDailySheet(date) {
-            const dayLog = log[date] || {};
             const rows = [
                 ['الاسم', 'الوردية', 'الخط', 'الفئة', 'الحالة']
             ];
             employees.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar')).forEach(e => { rows.push([e
                     .name, SHIFT_LABEL[e.shift] || '', LINE_LABEL[e.line] || '', CAT_LABEL[e.cat] || '',
-                    statusArabic(dayLog[e.id], e.shift, date)
+                    statusArabic(getEmpStatus(e, date))
                 ]); });
             let absent = 0,
-                off = 0;
+                off = 0,
+                unrec = 0;
             employees.forEach(e => {
-                if (isOffDay(e.shift, date)) off++;
-                else if (dayLog[e.id] === 'absent') absent++;
+                const status = getEmpStatus(e, date);
+                if (status === 'off') off++;
+                else if (status === 'absent') absent++;
+                else if (status === 'unrecorded') unrec++;
             });
-            const present = employees.length - off - absent;
+            const present = employees.length - off - absent - unrec;
             rows.push([]);
             rows.push(['الإجمالي', employees.length]);
             rows.push(['أيام عمل', employees.length - off]);
             rows.push(['حاضر', present]);
             rows.push(['غائب', absent]);
+            rows.push(['لم يسجل', unrec]);
             rows.push(['إجازة', off]);
             const ws = XLSX.utils.aoa_to_sheet(rows);
             ws['!cols'] = [{ wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 }];
@@ -3382,10 +3550,11 @@ testConnection();
                     const dateStr = `${y}-${pad(m)}-${pad(d)}`;
                     const cellDate = new Date(y, m - 1, d);
                     if (cellDate > todayD) { row.push(''); continue; }
-                    if (isOffDay(e.shift, dateStr)) { row.push('إجازة');
+                    const status = getEmpStatus(e, dateStr);
+                    if (status === 'off') { row.push('إجازة');
                         off++; continue; }
-                    const rec = log[dateStr] && log[dateStr][e.id];
-                    if (rec === 'absent') { row.push('غائب');
+                    if (status === 'unrecorded') { row.push('لم يسجل'); continue; }
+                    if (status === 'absent') { row.push('غائب');
                         absent++; } else { row.push('حاضر');
                         present++; }
                 }
@@ -3400,7 +3569,6 @@ testConnection();
         }
 
         function exportRosterSheet(date) {
-            const dayLog = log[date] || {};
             const rows = [
                 ['الوردية', 'الخط', 'الفئة', 'الاسم', 'حالة اليوم']
             ];
@@ -3408,11 +3576,11 @@ testConnection();
             shifts.forEach(shift => {
                 const activeLines = getLinesForShift(shift);
                 activeLines.forEach(l => {
-                    CATS.forEach(c => {
+                    catsForLine(l.key).forEach(c => {
                         const catEmps = getOrderedEmps(shift, l.key, c.key, employees.filter(e => e
                             .shift === shift && e.line === l.key && e.cat === c.key));
                         catEmps.forEach(e => { rows.push([SHIFT_LABEL[shift], l.label, c.label, e
-                                .name, statusArabic(dayLog[e.id], e.shift, date)
+                                .name, statusArabic(getEmpStatus(e, date))
                             ]); });
                     });
                 });
@@ -3515,3 +3683,4 @@ testConnection();
     </script>
 </body>
 </html>
+    
