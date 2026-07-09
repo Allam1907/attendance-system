@@ -1939,6 +1939,50 @@
                 grid-template-columns: 1fr;
             }
         }
+        .day-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin: 16px 0 4px;
+        }
+        .day-status-card {
+            background: var(--bg3);
+            border: 1.5px solid var(--border2);
+            border-radius: var(--radius);
+            padding: 16px 14px;
+            cursor: pointer;
+            text-align: center;
+            transition: all .2s ease;
+            user-select: none;
+        }
+        .day-status-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .day-status-card.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            box-shadow: var(--shadow-accent);
+        }
+        .day-status-card .dsc-icon {
+            font-size: 26px;
+            margin-bottom: 8px;
+        }
+        .day-status-card .dsc-label {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .day-settings-summary {
+            margin-top: 16px;
+            padding: 12px 14px;
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text2);
+        }
     </style>
 
 </head>
@@ -2018,6 +2062,7 @@ testConnection();
             <button class="tab-btn" data-tab="monthly">📅 الجدول الشهري</button>
             <button class="tab-btn" data-tab="summary">📊 الملخص</button>
             <button class="tab-btn" data-tab="roster">🗂 القوام الأساسي</button>
+            <button class="tab-btn" data-tab="daysettings">⚙️ إعدادات اليوم</button>
             <button class="tab-btn" data-tab="export">📥 تصدير إكسيل</button>
         </div>
     </div>
@@ -2089,6 +2134,7 @@ testConnection();
             <div class="ctrl-row">
                 <label>الشهر:</label>
                 <input type="month" id="monthly-month" />
+                <button class="btn btn-primary" id="confirm-all-days-btn" style="margin-right:auto;">✔ تأكيد كل الأيام السابقة (الكل حاضر)</button>
             </div>
             <div style="margin-bottom: 0.8rem;">
                 <input type="text" id="search-monthly" placeholder="🔍 ابحث عن موظف..."
@@ -2099,7 +2145,7 @@ testConnection();
                 <span><span class="dot" style="background:var(--green)"></span>حاضر</span>
                 <span><span class="dot" style="background:var(--red)"></span>غائب</span>
                 <span><span class="dot" style="background:var(--text3)"></span>؟ لم يُسجَّل الحضور لهذا اليوم</span>
-                <span><span class="dot" style="background:var(--bg3)"></span>إجازة (الخميس مسائي / الجمعة صباحي)</span>
+                <span><span class="dot" style="background:var(--bg3)"></span>إجازة (محددة يدويًا من إعدادات اليوم)</span>
             </div>
             <div class="monthly-wrap">
                 <table class="monthly-table" id="monthly-table"></table>
@@ -2134,6 +2180,40 @@ testConnection();
                 </div>
             </div>
             <div id="roster-content"></div>
+        </div>
+        <!-- DAY SETTINGS -->
+        <div class="tab-page" id="page-daysettings">
+            <div class="card">
+                <div class="card-title">📅 اختيار التاريخ</div>
+                <div class="ctrl-row" style="margin:0;">
+                    <label>التاريخ:</label>
+                    <input type="date" id="daysettings-date" />
+                    <span id="daysettings-day-name" style="color:var(--text2);font-size:13px;"></span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">⚙️ حالة اليوم</div>
+                <div class="day-status-grid" id="day-status-grid">
+                    <div class="day-status-card" data-status="work">
+                        <div class="dsc-icon">🟢</div>
+                        <div class="dsc-label">يوم عمل (الصباحي + المسائي)</div>
+                    </div>
+                    <div class="day-status-card" data-status="off_sabahi">
+                        <div class="dsc-icon">🌅</div>
+                        <div class="dsc-label">إجازة صباحي</div>
+                    </div>
+                    <div class="day-status-card" data-status="off_masai">
+                        <div class="dsc-icon">🌙</div>
+                        <div class="dsc-label">إجازة مسائي</div>
+                    </div>
+                    <div class="day-status-card" data-status="off_all">
+                        <div class="dsc-icon">🏖️</div>
+                        <div class="dsc-label">إجازة للكل</div>
+                    </div>
+                </div>
+                <div class="day-settings-summary" id="daysettings-summary"></div>
+                <button class="btn btn-primary" id="daysettings-save-btn" style="width:100%;margin-top:16px;">💾 حفظ</button>
+            </div>
         </div>
         <!-- EXPORT -->
         <div class="tab-page" id="page-export">
@@ -2258,12 +2338,33 @@ testConnection();
             return dayLog[emp.id] === 'absent' ? 'absent' : 'present';
         }
 
-        // إجازات: الخميس إجازة للمسائي، الجمعة إجازة للصباحي
+        // ══════════════════════════════════════════════
+        //  إعدادات اليوم (تجاوز يدوي لحالة يوم معيّن)
+        // ══════════════════════════════════════════════
+        function loadDayOverrides() { try { return JSON.parse(localStorage.getItem('att_day_overrides') || '{}'); } catch (e) { return {}; } }
+        function saveDayOverrides(o) { localStorage.setItem('att_day_overrides', JSON.stringify(o)); }
+        let dayOverrides = loadDayOverrides();
+
+        // الحالة الافتراضية: كل الأيام "يوم عمل" ما لم يتم تحديد إجازة يدويًا من إعدادات اليوم
+        function defaultDayStatus(dateStr) {
+            return 'work';
+        }
+
+        // الحالة الفعلية لليوم: تجاوز يدوي إن وجد، وإلا القاعدة الافتراضية
+        function getDayStatus(dateStr) { return dayOverrides[dateStr] || defaultDayStatus(dateStr); }
+
+        function setDayStatus(dateStr, status) {
+            if (status === defaultDayStatus(dateStr)) { delete dayOverrides[dateStr]; } // لا داعي لحفظ تجاوز يطابق الافتراضي
+            else { dayOverrides[dateStr] = status; }
+            saveDayOverrides(dayOverrides);
+        }
+
+        // إجازات: مبنية على حالة اليوم (افتراضية أو مخصصة)
         function isOffDay(shift, dateStr) {
-            const d = new Date(dateStr + 'T12:00:00');
-            const day = d.getDay(); // 0=أحد, 4=خميس, 5=جمعة
-            if (shift === 'masai' && day === 4) return true; // الخميس مسائي
-            if (shift === 'sabahi' && day === 5) return true; // الجمعة صباحي
+            const status = getDayStatus(dateStr);
+            if (status === 'off_all') return true;
+            if (status === 'off_sabahi' && shift === 'sabahi') return true;
+            if (status === 'off_masai' && shift === 'masai') return true;
             return false;
         }
 
@@ -2345,6 +2446,7 @@ testConnection();
                 employees = loadEmployees();
                 log = loadLog();
                 rosterOrder = loadRosterOrder();
+                dayOverrides = loadDayOverrides();
                 const t = btn.dataset.tab;
                 if (t === 'dashboard') renderDashboard();
                 if (t === 'employees') renderEmployees(document.getElementById('search-emp').value);
@@ -2352,7 +2454,61 @@ testConnection();
                 if (t === 'monthly') renderMonthly();
                 if (t === 'summary') renderSummary();
                 if (t === 'roster') renderRoster();
+                if (t === 'daysettings') renderDaySettings();
             });
+        });
+
+        // ══════════════════════════════════════════════
+        //  DAY SETTINGS PAGE
+        // ══════════════════════════════════════════════
+        let daySettingsSelected = null; // الحالة المختارة حالياً في الشاشة (قبل الحفظ)
+
+        function daySettingsLabel(status) {
+            return { work: 'يوم عمل (الصباحي + المسائي)', off_sabahi: 'إجازة صباحي', off_masai: 'إجازة مسائي',
+                off_all: 'إجازة للكل' } [status] || status;
+        }
+
+        function renderDaySettings() {
+            const dateInput = document.getElementById('daysettings-date');
+            if (!dateInput.value) dateInput.value = todayStr();
+            const date = dateInput.value;
+            document.getElementById('daysettings-day-name').textContent = dayName(date);
+            daySettingsSelected = getDayStatus(date);
+            updateDaySettingsUI(date);
+        }
+
+        function updateDaySettingsUI(date) {
+            document.querySelectorAll('.day-status-card').forEach(card => {
+                card.classList.toggle('active', card.dataset.status === daySettingsSelected);
+            });
+            const isOverridden = !!dayOverrides[date];
+            const summaryEl = document.getElementById('daysettings-summary');
+            summaryEl.textContent = isOverridden ?
+                `الحالة المخصّصة لهذا اليوم: ${daySettingsLabel(daySettingsSelected)}` :
+                `الحالة الحالية (افتراضية): ${daySettingsLabel(daySettingsSelected)}`;
+        }
+
+        document.getElementById('daysettings-date').addEventListener('change', () => {
+            const date = document.getElementById('daysettings-date').value || todayStr();
+            document.getElementById('daysettings-day-name').textContent = dayName(date);
+            daySettingsSelected = getDayStatus(date);
+            updateDaySettingsUI(date);
+        });
+
+        document.querySelectorAll('.day-status-card').forEach(card => {
+            card.addEventListener('click', () => {
+                daySettingsSelected = card.dataset.status;
+                const date = document.getElementById('daysettings-date').value || todayStr();
+                updateDaySettingsUI(date);
+            });
+        });
+
+        document.getElementById('daysettings-save-btn').addEventListener('click', () => {
+            const date = document.getElementById('daysettings-date').value || todayStr();
+            if (!daySettingsSelected) daySettingsSelected = 'work';
+            setDayStatus(date, daySettingsSelected);
+            updateDaySettingsUI(date);
+            toast('✅ تم حفظ حالة اليوم');
         });
 
         // ══════════════════════════════════════════════
@@ -2974,6 +3130,29 @@ testConnection();
         // ══════════════════════════════════════════════
         //  MONTHLY
         // ══════════════════════════════════════════════
+        // تأكيد جماعي: كل أيام الشهر (من 1 وحتى النهاردة) اللي لسه متأكدتش، تتأكد كـ"الكل حاضر"
+        window.confirmAllPastDays = function() {
+            const monthVal = document.getElementById('monthly-month').value || monthStr();
+            const [y, m] = monthVal.split('-').map(Number);
+            const dim = daysInMonth(y, m);
+            const today = todayStr();
+            let count = 0;
+            for (let d = 1; d <= dim; d++) {
+                const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+                if (dateStr > today) break; // متوقفناش عند أيام لسه ما جتش
+                if (!isDayConfirmed(dateStr)) { confirmedDates[dateStr] = true; count++; }
+            }
+            if (count === 0) { toast('كل الأيام السابقة متأكدة بالفعل ✓'); return; }
+            saveConfirmedDates(confirmedDates);
+            renderMonthly();
+            toast(`تم تأكيد ${count} يوم كـ"الكل حاضر" ✓`);
+        };
+        document.getElementById('confirm-all-days-btn').addEventListener('click', () => {
+            const monthVal = document.getElementById('monthly-month').value || monthStr();
+            if (!confirm(`سيتم تأكيد كل الأيام السابقة (حتى النهاردة) في شهر ${monthVal} كـ"الكل حاضر" لمن لم يُسجَّل غيابه. متابعة؟`)) return;
+            confirmAllPastDays();
+        });
+
         function renderMonthly() {
             const monthVal = document.getElementById('monthly-month').value || monthStr();
             const [y, m] = monthVal.split('-').map(Number);
@@ -3448,8 +3627,9 @@ testConnection();
         //  BACKUP / RESTORE
         // ══════════════════════════════════════════════
         document.getElementById('backup-btn').addEventListener('click', () => {
-            const data = { employees, log, rosterOrder, lineConfig, exportedAt: new Date().toISOString(),
-            version: 2 };
+            const data = { employees, log, rosterOrder, lineConfig, confirmedDates, dayOverrides, catColors,
+            exportedAt: new Date().toISOString(),
+            version: 3 };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -3476,16 +3656,23 @@ testConnection();
                     log = data.log || {};
                     rosterOrder = data.rosterOrder || {};
                     lineConfig = data.lineConfig || DEFAULT_LINE_CONFIG;
+                    confirmedDates = data.confirmedDates || {};
+                    dayOverrides = data.dayOverrides || {};
+                    catColors = Object.assign({}, DEFAULT_CAT_COLORS, data.catColors || {});
                     saveEmployees(employees);
                     saveLog(log);
                     saveRosterOrder(rosterOrder);
                     saveLineConfig(lineConfig);
+                    saveConfirmedDates(confirmedDates);
+                    saveDayOverrides(dayOverrides);
+                    saveCatColors(catColors);
                     renderEmployees('');
                     renderDashboard();
                     renderDaily();
                     renderMonthly();
                     renderSummary();
                     renderRoster();
+                    if (document.getElementById('page-daysettings').classList.contains('active')) renderDaySettings();
                     toast('تم استعادة النسخة الاحتياطية بنجاح ✓');
                 } catch (err) { alert('فشل استعادة الملف: ' + err.message); } finally { document.getElementById(
                         'restore-file').value = ''; }
@@ -3683,4 +3870,3 @@ testConnection();
     </script>
 </body>
 </html>
-    
