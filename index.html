@@ -2214,6 +2214,11 @@ testConnection();
                 <div class="day-settings-summary" id="daysettings-summary"></div>
                 <button class="btn btn-primary" id="daysettings-save-btn" style="width:100%;margin-top:16px;">💾 حفظ</button>
             </div>
+            <div class="card">
+                <div class="card-title">🚫 قفل الخطوط (ينقل الموظفين تلقائي للخط الشغال)</div>
+                <div id="closed-lines-container"></div>
+                <button class="btn btn-primary" id="closed-lines-save-btn" style="width:100%;margin-top:16px;">💾 حفظ قفل الخطوط</button>
+            </div>
         </div>
         <!-- EXPORT -->
         <div class="tab-page" id="page-export">
@@ -2368,6 +2373,46 @@ testConnection();
             return false;
         }
 
+        // ══════════════════════════════════════════════
+        //  قفل الخطوط (يومي)
+        // ══════════════════════════════════════════════
+        function loadClosedLines() { try { return JSON.parse(localStorage.getItem('att_closed_lines') || '{}'); } catch (e) { return {}; } }
+        function saveClosedLines(o) { localStorage.setItem('att_closed_lines', JSON.stringify(o)); }
+        let closedLines = loadClosedLines();
+        function getClosedLinesForDate(dateStr) { return closedLines[dateStr] || []; }
+
+        function toggleClosedLine(dateStr, lineKey) {
+            if (!closedLines[dateStr]) closedLines[dateStr] = [];
+            const arr = closedLines[dateStr];
+            const idx = arr.indexOf(lineKey);
+            if (idx >= 0) arr.splice(idx, 1); else arr.push(lineKey);
+            if (arr.length === 0) delete closedLines[dateStr];
+            saveClosedLines(closedLines);
+        }
+
+        function getTargetLineForTransfer(dateStr, shift, excludeLine) {
+            const closed = getClosedLinesForDate(dateStr);
+            const activeLines = getLinesForShift(shift).filter(l => !closed.includes(l.key) && l.key !== excludeLine && l.key !== 'lx');
+            if (activeLines.length === 0) {
+                const allActive = getLinesForShift(shift).filter(l => !closed.includes(l.key) && l.key !== excludeLine);
+                return allActive.length > 0 ? allActive[0] : null;
+            }
+            let best = null, bestCount = Infinity;
+            activeLines.forEach(l => {
+                const count = employees.filter(e => e.shift === shift && e.line === l.key).length;
+                if (count < bestCount) { bestCount = count; best = l; }
+            });
+            return best;
+        }
+
+        function getEffectiveLine(emp, dateStr) {
+            if (!dateStr || !emp) return emp.line;
+            const closed = getClosedLinesForDate(dateStr);
+            if (!closed.includes(emp.line)) return emp.line;
+            const target = getTargetLineForTransfer(dateStr, emp.shift, emp.line);
+            return target ? target.key : emp.line;
+        }
+
         function loadRosterOrder() { try { return JSON.parse(localStorage.getItem('att_roster_order') || 'null') || {}; } catch (
                 e) { return {}; } }
 
@@ -2475,6 +2520,7 @@ testConnection();
             document.getElementById('daysettings-day-name').textContent = dayName(date);
             daySettingsSelected = getDayStatus(date);
             updateDaySettingsUI(date);
+            renderClosedLinesUI();
         }
 
         function updateDaySettingsUI(date) {
@@ -2493,6 +2539,7 @@ testConnection();
             document.getElementById('daysettings-day-name').textContent = dayName(date);
             daySettingsSelected = getDayStatus(date);
             updateDaySettingsUI(date);
+            renderClosedLinesUI();
         });
 
         document.querySelectorAll('.day-status-card').forEach(card => {
@@ -2509,6 +2556,57 @@ testConnection();
             setDayStatus(date, daySettingsSelected);
             updateDaySettingsUI(date);
             toast('✅ تم حفظ حالة اليوم');
+        });
+
+        function renderClosedLinesUI() {
+            const date = document.getElementById('daysettings-date').value || todayStr();
+            const container = document.getElementById('closed-lines-container');
+            const closed = getClosedLinesForDate(date);
+            let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+            ['sabahi', 'masai'].forEach(shift => {
+                const label = shift === 'sabahi' ? '☀️ صباحي' : '🌙 مسائي';
+                const activeLines = getLinesForShift(shift);
+                html += `<div><h4 style="color:${shift==='sabahi'?'var(--amber)':'var(--info)'};margin-bottom:10px;font-size:13px;">${label}</h4>`;
+                activeLines.forEach(l => {
+                    const isClosed = closed.includes(l.key);
+                    html += `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:${isClosed?'var(--red-bg)':'var(--bg3)'};border:1px solid ${isClosed?'var(--red-b)':'var(--border)'};border-radius:10px;cursor:pointer;transition:all .2s;">
+                        <input type="checkbox" data-closeline="${l.key}" ${isClosed?'checked':''} style="accent-color:var(--red);width:16px;height:16px;">
+                        <span style="font-size:12px;font-weight:600;color:${isClosed?'var(--red)':'var(--text)'};">${l.label}</span>
+                        ${isClosed ? '<span style="font-size:10px;color:var(--red);margin-right:auto;">🔒 مغلق</span>' : '<span style="font-size:10px;color:var(--green);margin-right:auto;">✅ مفتوح</span>'}
+                    </label>`;
+                });
+                html += '</div>';
+            });
+            html += '</div>';
+            const transferred = [];
+            ['sabahi', 'masai'].forEach(shift => {
+                const shiftEmps = employees.filter(e => e.shift === shift);
+                shiftEmps.forEach(e => {
+                    if (closed.includes(e.line)) {
+                        const target = getTargetLineForTransfer(date, shift, e.line);
+                        if (target) transferred.push({ name: e.name, from: LINE_LABEL[e.line] || e.line, to: target.label, shift });
+                    }
+                });
+            });
+            if (transferred.length > 0) {
+                html += `<div style="margin-top:14px;padding:12px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;">📋 الموظفين اللي هيتنقلوا تلقائي:</div>
+                    ${transferred.map(t => `<div style="font-size:11px;padding:3px 0;color:var(--text2);">• ${esc(t.name)}: ${t.from} → ${t.to}</div>`).join('')}
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        document.getElementById('closed-lines-save-btn').addEventListener('click', () => {
+            const date = document.getElementById('daysettings-date').value || todayStr();
+            const checks = document.querySelectorAll('#closed-lines-container input[data-closeline]');
+            const closed = [];
+            checks.forEach(cb => { if (cb.checked) closed.push(cb.dataset.closeline); });
+            if (closed.length === 0) delete closedLines[date];
+            else closedLines[date] = closed;
+            saveClosedLines(closedLines);
+            renderClosedLinesUI();
+            toast('✅ تم حفظ إعدادات قفل الخطوط');
         });
 
         // ══════════════════════════════════════════════
@@ -2859,9 +2957,16 @@ testConnection();
             if (activeLines.length === 0) {
                 return `<div class="empty-line-msg">لا توجد خطوط مفعّلة لهذه الوردية. فعّل الخطوط من إعدادات الموظفين.</div>`;
             }
+            const closed = date ? getClosedLinesForDate(date) : [];
+            const openLines = activeLines.filter(l => !closed.includes(l.key));
+            function effectiveLineForEmp(e) {
+                if (!date || !closed.includes(e.line)) return e.line;
+                const target = getTargetLineForTransfer(date, shift, e.line);
+                return target ? target.key : e.line;
+            }
             let html = `<div class="roster-lines-row">`;
-            activeLines.forEach(l => {
-                const lineEmps = shiftEmps.filter(e => e.line === l.key);
+            openLines.forEach(l => {
+                const lineEmps = shiftEmps.filter(e => effectiveLineForEmp(e) === l.key);
                 const cats = catsForLine(l.key);
                 html += `<div class="line-group ${buildLineCls(l.key)}">
                     <div class="line-group-hdr">
@@ -2944,8 +3049,16 @@ testConnection();
                 const lineKeys = activeLines.map(l => l.key);
                 html += `<div class="roster-shift ${shift==='sabahi'?'shift-sabahi':'shift-masai'}" style="margin-bottom:16px;">
                     <div class="roster-shift-hdr">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'} (${shiftEmps.length})</div>`;
-                html += buildLinesRowHTML(shift, shiftEmps, null, 'employees');
-                const others = shiftEmps.filter(e => !lineKeys.includes(e.line));
+                html += buildLinesRowHTML(shift, shiftEmps, todayStr(), 'employees');
+                const todayClosed = getClosedLinesForDate(todayStr());
+                const others = shiftEmps.filter(e => {
+                    if (!lineKeys.includes(e.line)) return true;
+                    if (todayClosed.includes(e.line)) {
+                        const t = getTargetLineForTransfer(todayStr(), shift, e.line);
+                        if (!t) return true;
+                    }
+                    return false;
+                });
                 if (others.length > 0) {
                     html += `<div style="padding:10px;">
                         <div class="line-card lc-none">
@@ -3040,8 +3153,41 @@ testConnection();
                 wrap.innerHTML = `<div class="empty">لا توجد نتائج مطابقة للبحث 🔍</div>`;
                 return;
             }
+            const todayNow = new Date();
+            const curMonth = todayNow.getMonth() + 1;
+            const curYear = todayNow.getFullYear();
+            const dim = daysInMonth(curYear, curMonth);
+            let monthDates = [];
+            for (let d = 1; d <= dim; d++) {
+                const ds = `${curYear}-${pad(curMonth)}-${pad(d)}`;
+                if (new Date(ds + 'T12:00:00') <= todayNow) monthDates.push(ds);
+            }
+            let totalPresent = 0, totalAbsent = 0, totalOff = 0, totalUnrec = 0;
+            list.forEach(e => {
+                const status = getEmpStatus(e, date);
+                if (status === 'off') totalOff++;
+                else if (status === 'absent') totalAbsent++;
+                else if (status === 'unrecorded') totalUnrec++;
+                else totalPresent++;
+            });
+            const monthStatsMap = {};
+            list.forEach(e => {
+                let p = 0, a = 0;
+                monthDates.forEach(d => {
+                    if (isOffDay(e.shift, d)) return;
+                    const rec = log[d] && log[d][e.id];
+                    if (rec === 'absent') a++; else p++;
+                });
+                monthStatsMap[e.id] = { present: p, absent: a };
+            });
+            let summaryHtml = `<div class="metric-grid" style="margin-bottom:1rem;">
+                <div class="metric-card"><div class="metric-label">✅ حاضر اليوم</div><div class="metric-value" style="color:var(--green);font-size:22px;">${totalPresent}</div></div>
+                <div class="metric-card"><div class="metric-label">❌ غائب اليوم</div><div class="metric-value" style="color:var(--red);font-size:22px;">${totalAbsent}</div></div>
+                <div class="metric-card"><div class="metric-label">🔄 إجازة</div><div class="metric-value" style="color:var(--text3);font-size:22px;">${totalOff}</div></div>
+                <div class="metric-card"><div class="metric-label">📅 أيام الحضور (${MONTH_AR[curMonth-1]})</div><div class="metric-value" style="color:var(--accent);font-size:22px;">${monthDates.length} يوم عمل</div></div>
+            </div>`;
             const shifts = ['sabahi', 'masai'];
-            let html = '';
+            let html = summaryHtml;
             const confirmed = isDayConfirmed(date);
             html += confirmed ?
                 `<div class="confirm-banner confirmed">
@@ -3059,7 +3205,15 @@ testConnection();
                 html += `<div class="roster-shift ${shift==='sabahi'?'shift-sabahi':'shift-masai'}" style="margin-bottom:16px;">
                     <div class="roster-shift-hdr">${shift==='sabahi'?'☀️ صباحي':'🌙 مسائي'}</div>`;
                 html += buildLinesRowHTML(shift, shiftEmps, date, 'daily');
-                const others = shiftEmps.filter(e => !activeLines.map(l => l.key).includes(e.line));
+                const todayClosed = getClosedLinesForDate(date);
+                const others = shiftEmps.filter(e => {
+                    if (!activeLines.map(l => l.key).includes(e.line)) return true;
+                    if (todayClosed.includes(e.line)) {
+                        const t = getTargetLineForTransfer(date, shift, e.line);
+                        if (!t) return true;
+                    }
+                    return false;
+                });
                 if (others.length > 0) {
                     html += `<div style="padding:10px;">
                         <div class="line-card lc-none">
@@ -3090,10 +3244,21 @@ testConnection();
                 statusColor = 'var(--text3)'; } else if (isAbsent) { statusText = '✕ غائب';
                 statusColor = 'var(--red)'; } else if (isUnrec) { statusText = '⏳ لم يسجل';
                 statusColor = 'var(--text3)'; }
+            const todayNow = new Date();
+            const curM = todayNow.getMonth() + 1, curY = todayNow.getFullYear();
+            const dim = daysInMonth(curY, curM);
+            let empPresent = 0, empAbsent = 0;
+            for (let d = 1; d <= dim; d++) {
+                const ds = `${curY}-${pad(curM)}-${pad(d)}`;
+                if (new Date(ds + 'T12:00:00') > todayNow) break;
+                if (isOffDay(e.shift, ds)) continue;
+                const rec = log[ds] && log[ds][e.id];
+                if (rec === 'absent') empAbsent++; else empPresent++;
+            }
             return `<div class="daily-row">
                 <div style="flex:1;">
                     <p class="emp-name" style="${isAbsent?'text-decoration:line-through;opacity:.6;':''}">${esc(e.name)}</p>
-                    <p class="emp-meta">${lineBadge(e.line)} ${catBadge(e.cat)}</p>
+                    <p class="emp-meta">${lineBadge(e.line)} ${catBadge(e.cat)} <span style="font-size:10px;color:var(--text3);">حضور: ${empPresent} | غياب: ${empAbsent}</span></p>
                 </div>
                 <div class="daily-btns">
                     <span style="font-size:11px;color:${statusColor};font-weight:600;margin-left:8px;">${statusText}</span>
@@ -3171,7 +3336,7 @@ testConnection();
                     `<tr><td style="padding:2rem;text-align:center;color:var(--text3);border:none;">لا توجد نتائج مطابقة للبحث 🔍</td></tr>`;
                 return;
             }
-            let theadCells = `<th class="name-header">الموظف</th><th>حاضر</th><th>غائب</th><th>غياب%</th>`;
+            let theadCells = `<th class="name-header">الموظف</th><th>غائب</th><th>غياب%</th>`;
             for (let d = 1; d <= dim; d++) {
                 const dateStr = `${y}-${pad(m)}-${pad(d)}`;
                 theadCells +=
@@ -3207,7 +3372,6 @@ testConnection();
             empRows.forEach(r => {
                 const pctStr = r.pct.toFixed(1);
                 rows += `<tr><td class="name-cell">${esc(r.emp.name)}</td>
-                         <td style="color:var(--green);font-weight:700;">${r.present}</td>
                          <td style="color:var(--red);font-weight:700;">${r.absent}</td>
                          <td style="font-weight:700;">${pctStr}%</td>${r.cellsHtml}</tr>`;
             });
@@ -3512,22 +3676,39 @@ testConnection();
                 const stat = empAbsenceMap[e.id];
                 const elapsed = stat.present + stat.absent;
                 const pct = elapsed > 0 ? (stat.absent / elapsed) * 100 : 0;
-                return { name: e.name, absent: stat.absent, pct };
-            }).filter(x => x.absent > 0).sort((a, b) => b.pct - a.pct).slice(0, 5);
-            const maxPct = top5.length > 0 ? Math.max(...top5.map(x => x.pct), 1) : 1;
+                const prevM = m === 1 ? 12 : m - 1;
+                const prevY = m === 1 ? y - 1 : y;
+                const prevDim = daysInMonth(prevY, prevM);
+                let prevAbsent = 0;
+                for (let d = 1; d <= prevDim; d++) {
+                    const ds = `${prevY}-${pad(prevM)}-${pad(d)}`;
+                    const rec = log[ds] && log[ds][e.id];
+                    if (rec === 'absent') prevAbsent++;
+                }
+                const trend = stat.absent - prevAbsent;
+                return { name: e.name, absent: stat.absent, pct, trend };
+            }).filter(x => x.absent > 0).sort((a, b) => b.absent - a.absent).slice(0, 5);
+            const maxAbs = top5.length > 0 ? Math.max(...top5.map(x => x.absent), 1) : 1;
             const barChartHtml = top5.length === 0 ?
                 `<div class="empty-line-msg">لا توجد بيانات غياب كافية بعد</div>` :
-                top5.map((x, i) => `
+                top5.map((x, i) => {
+                    const trendIcon = x.trend > 0 ? `↑ +${x.trend}` : x.trend < 0 ? `↓ ${x.trend}` : '—';
+                    const trendColor = x.trend > 0 ? 'var(--red)' : x.trend < 0 ? 'var(--green)' : 'var(--text3)';
+                    return `
                 <div class="bar-row">
                     <div class="bar-rank">${i+1}</div>
                     <div class="bar-name">${esc(x.name)}</div>
                     <div class="bar-track">
-                        <div class="bar-fill" style="width:${(x.pct/maxPct*100).toFixed(1)}%;background:linear-gradient(90deg, var(--red), var(--red-dark));">
-                            <span class="bar-fill-val">${x.absent}</span>
+                        <div class="bar-fill" style="width:${(x.absent/maxAbs*100).toFixed(1)}%;background:linear-gradient(90deg, var(--red), var(--red-dark));">
+                            <span class="bar-fill-val">${x.absent} يوم</span>
                         </div>
                     </div>
-                    <div class="bar-pct" style="color:var(--red);">${x.pct.toFixed(1)}%</div>
-                </div>`).join('');
+                    <div style="width:60px;text-align:left;flex-shrink:0;">
+                        <div style="font-size:12px;font-weight:700;color:var(--red);">${x.absent} يوم</div>
+                        <div style="font-size:10px;color:${trendColor};font-weight:600;">${trendIcon} (${x.pct.toFixed(0)}%)</div>
+                    </div>
+                </div>`;
+                }).join('');
 
             // رسم بياني محسّن آخر 30 يوم
             const trendDays = [];
@@ -3536,28 +3717,25 @@ testConnection();
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 const dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-                let a = 0,
-                    w = 0;
+                let a = 0;
                 employees.forEach(e => {
                     const status = getEmpStatus(e, dateStr);
                     if (status === 'off' || status === 'unrecorded') return;
-                    w++;
                     if (status === 'absent') a++;
                 });
-                const pct = w > 0 ? (a / w) * 100 : 0;
-                trendDays.push(pct);
+                trendDays.push(a);
                 trendLabels.push(d.getDate() + '/' + (d.getMonth() + 1));
             }
             const maxTrend = Math.max(...trendDays, 1);
-            const barWidth = Math.max(10, 100 / 30);
-            const chartBarsHtml = trendDays.map((pct, idx) => {
-                const height = (pct / maxTrend) * 85 + 2;
+            const avgTrend = (trendDays.reduce((a,b)=>a+b,0)/trendDays.length).toFixed(1);
+            const chartBarsHtml = trendDays.map((a, idx) => {
+                const height = (a / maxTrend) * 85 + 2;
                 let barClass = 'bar-low';
-                if (pct > 15) barClass = 'bar-mid';
-                if (pct > 30) barClass = 'bar-high';
+                if (a > 3) barClass = 'bar-mid';
+                if (a > 8) barClass = 'bar-high';
                 return `<div class="chart-bar-wrapper">
                     <div class="chart-bar ${barClass}" style="height:${height}px;">
-                        <span class="chart-bar-tooltip">${pct.toFixed(1)}%</span>
+                        <span class="chart-bar-tooltip">${a} غائب</span>
                     </div>
                     <div class="chart-bar-label">${trendLabels[idx]}</div>
                 </div>`;
@@ -3585,12 +3763,12 @@ testConnection();
                 <div class="dash-kpi kpi-amber"><div class="dash-kpi-icon">📊</div><div class="dash-kpi-label">نسبة الغياب في ${MONTH_AR[m-1]}</div><div class="dash-kpi-val" style="color:var(--amber);">${monthAbsencePct}%</div><div class="dash-kpi-sub">${MONTH_AR[m-1]} ${y}</div></div>
             </div>
             <div class="dash-section"><div class="dash-section-title">📌 حالة اليوم (${dayName(today)})</div><div class="today-pills">${todayPillsHtml || '<span style="color:var(--text3);font-size:13px;">لا يوجد موظفين</span>'}</div></div>
-            <div class="dash-section"><div class="dash-section-title">🏆 الأعلى غياباً في ${MONTH_AR[m-1]}</div><div class="card"><div class="bar-chart">${barChartHtml}</div></div></div>
+            <div class="dash-section"><div class="dash-section-title">🏆 الأعلى غياباً في ${MONTH_AR[m-1]} (عدد أيام)</div><div class="card"><div class="bar-chart">${barChartHtml}</div></div></div>
 
             <div class="dash-section"><div class="dash-section-title">📈 اتجاه الغياب آخر 30 يوم</div>
                 <div class="chart-container">
                     <div class="chart-header">
-                        <h4>نسبة الغياب اليومية (%)</h4>
+                        <h4>عدد الغائبين يومياً</h4>
                         <div class="chart-legend">
                             <span><span class="dot-sm" style="background:var(--green);"></span> قليل</span>
                             <span><span class="dot-sm" style="background:var(--amber);"></span> متوسط</span>
@@ -3599,9 +3777,9 @@ testConnection();
                     </div>
                     <div class="chart-bars">${chartBarsHtml}</div>
                     <div class="chart-stats-row">
-                        <span>📉 أقل نسبة: <strong>${Math.min(...trendDays).toFixed(1)}%</strong></span>
-                        <span>📈 أعلى نسبة: <strong>${Math.max(...trendDays).toFixed(1)}%</strong></span>
-                        <span>📊 المتوسط: <strong>${(trendDays.reduce((a,b)=>a+b,0)/trendDays.length).toFixed(1)}%</strong></span>
+                        <span>📉 أقل عدد: <strong>${Math.min(...trendDays)} غائب</strong></span>
+                        <span>📈 أعلى عدد: <strong>${Math.max(...trendDays)} غائب</strong></span>
+                        <span>📊 المتوسط: <strong>${avgTrend} غائب/يوم</strong></span>
                     </div>
                 </div>
             </div>
@@ -3627,7 +3805,7 @@ testConnection();
         //  BACKUP / RESTORE
         // ══════════════════════════════════════════════
         document.getElementById('backup-btn').addEventListener('click', () => {
-            const data = { employees, log, rosterOrder, lineConfig, confirmedDates, dayOverrides, catColors,
+            const data = { employees, log, rosterOrder, lineConfig, confirmedDates, dayOverrides, catColors, closedLines,
             exportedAt: new Date().toISOString(),
             version: 3 };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -3659,6 +3837,7 @@ testConnection();
                     confirmedDates = data.confirmedDates || {};
                     dayOverrides = data.dayOverrides || {};
                     catColors = Object.assign({}, DEFAULT_CAT_COLORS, data.catColors || {});
+                    closedLines = data.closedLines || {};
                     saveEmployees(employees);
                     saveLog(log);
                     saveRosterOrder(rosterOrder);
@@ -3666,6 +3845,7 @@ testConnection();
                     saveConfirmedDates(confirmedDates);
                     saveDayOverrides(dayOverrides);
                     saveCatColors(catColors);
+                    saveClosedLines(closedLines);
                     renderEmployees('');
                     renderDashboard();
                     renderDaily();
@@ -3725,7 +3905,7 @@ testConnection();
             const dim = daysInMonth(y, m);
             const header = ['الاسم'];
             for (let d = 1; d <= dim; d++) header.push(String(d));
-            header.push('حاضر', 'غائب', 'إجازات', 'غياب%');
+            header.push('غائب', 'إجازات', 'غياب%');
             const rows = [header];
             const todayD = new Date();
             employees.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar')).forEach(e => {
@@ -3747,11 +3927,11 @@ testConnection();
                 }
                 const elapsed = present + absent;
                 const pct = elapsed > 0 ? ((absent / elapsed) * 100).toFixed(1) : '0.0';
-                row.push(present, absent, off, pct + '%');
+                row.push(absent, off, pct + '%');
                 rows.push(row);
             });
             const ws = XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols'] = [{ wch: 22 }, ...Array(dim).fill({ wch: 5 }), { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 9 }];
+            ws['!cols'] = [{ wch: 22 }, ...Array(dim).fill({ wch: 5 }), { wch: 8 }, { wch: 8 }, { wch: 9 }];
             return ws;
         }
 
